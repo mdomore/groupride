@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GroupRide - Carpooling Made Easy</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚗 GroupRide</h1>
+            <p>Share rides, save money, make friends!</p>
+        </header>
+
+        <main>
+            <!-- Event Creation Section -->
+            <section id="create-event" class="card">
+                <h2>Create New Event</h2>
+                <form id="event-form">
+                    <div class="form-group">
+                        <label for="event-name">Event Name:</label>
+                        <input type="text" id="event-name" required placeholder="e.g., Company Meeting">
+                    </div>
+                    <div class="form-group">
+                        <label for="event-date">Date:</label>
+                        <input type="date" id="event-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="event-time">Time:</label>
+                        <input type="time" id="event-time" required>
+                    </div>
+                    <button type="submit">Create Event</button>
+                </form>
+            </section>
+
+            <!-- Event Details Section (hidden initially) -->
+            <section id="event-details" class="card hidden">
+                <h2>Event Created!</h2>
+                <div class="event-info">
+                    <p><strong>Event ID:</strong> <span id="event-id-display"></span></p>
+                    <p><strong>Share this ID with others:</strong></p>
+                    <div class="share-section">
+                        <input type="text" id="share-url" readonly>
+                        <button id="copy-btn">Copy Link</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Car Registration Section -->
+            <section id="car-registration" class="card hidden">
+                <h2>Register Your Car</h2>
+                <form id="car-form">
+                    <div class="form-group">
+                        <label for="driver-name">Driver Name:</label>
+                        <input type="text" id="driver-name" required placeholder="Your name">
+                    </div>
+                    <div class="form-group">
+                        <label for="car-model">Car Model:</label>
+                        <input type="text" id="car-model" required placeholder="e.g., Toyota Camry">
+                    </div>
+                    <div class="form-group">
+                        <label for="available-seats">Available Seats:</label>
+                        <input type="number" id="available-seats" min="1" max="8" required>
+                    </div>
+                    <button type="submit">Register Car</button>
+                </form>
+            </section>
+
+            <!-- Join Event Section -->
+            <section id="join-event" class="card">
+                <h2>Join Existing Event</h2>
+                <form id="join-form">
+                    <div class="form-group">
+                        <label for="join-event-id">Event ID:</label>
+                        <input type="text" id="join-event-id" required placeholder="Enter event ID">
+                    </div>
+                    <button type="submit">Join Event</button>
+                </form>
+            </section>
+
+            <!-- Event View Section (hidden initially) -->
+            <section id="event-view" class="card hidden">
+                <div class="event-header">
+                    <h2 id="current-event-name"></h2>
+                    <button id="back-to-create" class="secondary-btn">← Create New Event</button>
+                </div>
+                <div id="cars-list"></div>
+                <div id="seat-booking"></div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
