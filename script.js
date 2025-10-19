@@ -28,10 +28,6 @@ class GroupRideApp {
             this.joinEvent();
         });
 
-        // Copy button
-        document.getElementById('copy-btn').addEventListener('click', () => {
-            this.copyEventLink();
-        });
 
         // Back to create event button
         document.getElementById('back-to-create').addEventListener('click', () => {
@@ -151,11 +147,6 @@ class GroupRideApp {
             // Show event details
             this.showEventDetails(eventId);
             this.showMessage('Event created successfully!', 'success');
-            
-            // Auto-copy event ID
-            setTimeout(() => {
-                this.copyEventLink();
-            }, 1000);
         } catch (error) {
             console.error('Error creating event:', error);
             this.showMessage('Failed to create event. Please try again.', 'error');
@@ -166,15 +157,8 @@ class GroupRideApp {
     showEventDetails(eventId) {
         this.currentEventId = eventId;
         
-        // Update display
-        document.getElementById('event-id-display').textContent = eventId;
-        document.getElementById('share-url').value = `${window.location.origin}${window.location.pathname}?event=${eventId}`;
-        
-        // Show relevant sections and hide creation
-        document.getElementById('event-details').classList.remove('hidden');
-        document.getElementById('car-registration').classList.remove('hidden');
-        document.getElementById('join-event').classList.add('hidden');
-        document.getElementById('create-event').classList.add('hidden');
+        // Go directly to event view
+        this.displayEventView();
     }
 
     // Register a car for the current event
@@ -542,7 +526,6 @@ class GroupRideApp {
         this.updateURL(null);
         
         // Hide all event-related sections
-        document.getElementById('event-details').classList.add('hidden');
         document.getElementById('car-registration').classList.add('hidden');
         document.getElementById('event-view').classList.add('hidden');
         
@@ -567,13 +550,6 @@ class GroupRideApp {
         this.clearFieldErrors();
     }
 
-    // Copy event link to clipboard
-    copyEventLink() {
-        const shareUrl = document.getElementById('share-url');
-        shareUrl.select();
-        document.execCommand('copy');
-        this.showMessage('Event link copied to clipboard!', 'success');
-    }
 
     // Copy current event ID to clipboard
     copyCurrentEventId() {

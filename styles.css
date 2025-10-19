@@ -239,34 +239,6 @@ button:active {
     transform: scale(1.05);
 }
 
-/* Event details */
-.event-info {
-    background: #f8fafc;
-    padding: 20px;
-    border-radius: 6px;
-    margin-bottom: 20px;
-    border: 1px solid #e2e8f0;
-}
-
-.share-section {
-    display: flex;
-    gap: 10px;
-    margin-top: 10px;
-}
-
-#share-url {
-    flex: 1;
-    background: white;
-}
-
-#copy-btn {
-    background: #0f172a;
-    padding: 12px 16px;
-}
-
-#copy-btn:hover {
-    background: #1e293b;
-}
 
 /* Cars summary - compact */
 .cars-summary {
