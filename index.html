@@ -9,7 +9,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>🚗 GroupRide</h1>
+            <h1>GroupRide</h1>
             <p>Share rides, save money, make friends!</p>
         </header>
 
@@ -50,6 +50,7 @@
             <!-- Car Registration Section -->
             <section id="car-registration" class="card hidden">
                 <h2>Register Your Car</h2>
+                <p class="section-description">Add your car to this event. You can register multiple cars if needed.</p>
                 <form id="car-form">
                     <div class="form-group">
                         <label for="driver-name">Driver Name:</label>
@@ -63,8 +64,14 @@
                         <label for="available-seats">Available Seats:</label>
                         <input type="number" id="available-seats" min="1" max="8" required>
                     </div>
-                    <button type="submit">Register Car</button>
+                    <div class="form-actions">
+                        <button type="submit">Register Car</button>
+                        <button type="button" id="cancel-add-car" class="secondary-btn">Cancel</button>
+                    </div>
                 </form>
+                <div class="form-note">
+                    <small>💡 You can register multiple cars for this event. Each car will be listed separately.</small>
+                </div>
             </section>
 
             <!-- Join Event Section -->
@@ -72,8 +79,8 @@
                 <h2>Join Existing Event</h2>
                 <form id="join-form">
                     <div class="form-group">
-                        <label for="join-event-id">Event ID:</label>
-                        <input type="text" id="join-event-id" required placeholder="Enter event ID">
+                        <label for="join-event-id">Event ID or URL:</label>
+                        <input type="text" id="join-event-id" required placeholder="Enter event ID or paste the full URL">
                     </div>
                     <button type="submit">Join Event</button>
                 </form>
@@ -81,13 +88,51 @@
 
             <!-- Event View Section (hidden initially) -->
             <section id="event-view" class="card hidden">
-                <div class="event-header">
-                    <h2 id="current-event-name"></h2>
+                <div class="event-navigation">
                     <button id="back-to-create" class="secondary-btn">← Create New Event</button>
+                </div>
+                <div class="event-header">
+                    <div class="event-title-section">
+                        <h2 id="current-event-name"></h2>
+                        <div class="event-datetime-display">
+                            <span id="current-event-date" class="event-date"></span>
+                            <span id="current-event-time" class="event-time"></span>
+                        </div>
+                        <div class="event-id-display">
+                            <span class="event-id-label">Event ID:</span>
+                            <span id="current-event-id" class="event-id-value"></span>
+                            <button id="copy-current-event-id" class="copy-id-btn" title="Copy Event Link">Copy</button>
+                        </div>
+                    </div>
                 </div>
                 <div id="cars-list"></div>
                 <div id="seat-booking"></div>
             </section>
+
+            <!-- Custom Modal for Passenger Name Input -->
+            <div id="passenger-modal" class="modal hidden">
+                <div class="modal-content">
+                    <h3>Book a Seat</h3>
+                    <p>Enter your name to book this seat:</p>
+                    <input type="text" id="passenger-name-input" placeholder="Your name" maxlength="20">
+                    <div class="modal-actions">
+                        <button id="confirm-booking" class="btn-primary">Book Seat</button>
+                        <button id="cancel-booking" class="secondary-btn">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Custom Modal for Confirmation -->
+            <div id="confirm-modal" class="modal hidden">
+                <div class="modal-content">
+                    <h3 id="confirm-title">Confirm Action</h3>
+                    <p id="confirm-message">Are you sure you want to proceed?</p>
+                    <div class="modal-actions">
+                        <button id="confirm-yes" class="btn-danger">Yes, Continue</button>
+                        <button id="confirm-no" class="secondary-btn">Cancel</button>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 

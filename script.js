@@ -51,6 +51,53 @@ class GroupRideApp {
         document.getElementById('back-to-create').addEventListener('click', () => {
             this.resetToCreateEvent();
         });
+
+        // Copy current event ID button
+        document.getElementById('copy-current-event-id').addEventListener('click', () => {
+            this.copyCurrentEventId();
+        });
+
+        // Cancel add car button
+        document.getElementById('cancel-add-car').addEventListener('click', () => {
+            this.cancelAddCar();
+        });
+
+        // Modal event listeners
+        document.getElementById('confirm-booking').addEventListener('click', () => {
+            this.confirmBooking();
+        });
+
+        document.getElementById('cancel-booking').addEventListener('click', () => {
+            this.hidePassengerModal();
+        });
+
+        document.getElementById('confirm-yes').addEventListener('click', () => {
+            this.confirmAction();
+        });
+
+        document.getElementById('confirm-no').addEventListener('click', () => {
+            this.hideConfirmModal();
+        });
+
+        // Close modals when clicking outside
+        document.getElementById('passenger-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'passenger-modal') {
+                this.hidePassengerModal();
+            }
+        });
+
+        document.getElementById('confirm-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'confirm-modal') {
+                this.hideConfirmModal();
+            }
+        });
+
+        // Enter key for passenger name input
+        document.getElementById('passenger-name-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.confirmBooking();
+            }
+        });
     }
 
     // Create a new event
@@ -124,10 +171,11 @@ class GroupRideApp {
         document.getElementById('event-id-display').textContent = eventId;
         document.getElementById('share-url').value = `${window.location.origin}${window.location.pathname}?event=${eventId}`;
         
-        // Show relevant sections
+        // Show relevant sections and hide creation
         document.getElementById('event-details').classList.remove('hidden');
         document.getElementById('car-registration').classList.remove('hidden');
         document.getElementById('join-event').classList.add('hidden');
+        document.getElementById('create-event').classList.add('hidden');
     }
 
     // Register a car for the current event
@@ -176,22 +224,52 @@ class GroupRideApp {
         // Clear form
         document.getElementById('car-form').reset();
 
-        // Refresh event view
+        // Hide car registration and show event view
+        document.getElementById('car-registration').classList.add('hidden');
         this.displayEventView();
         this.showMessage('Car registered successfully!', 'success');
     }
 
     // Join an existing event
     joinEvent() {
-        const eventId = document.getElementById('join-event-id').value.toUpperCase();
+        const input = document.getElementById('join-event-id').value.trim();
         
-        if (this.events[eventId]) {
+        // Extract event ID from input (handles both event ID and full URL)
+        const eventId = this.extractEventId(input);
+        
+        if (eventId && this.events[eventId]) {
             this.currentEventId = eventId;
             this.displayEventView();
-            this.showMessage('Successfully joined event!', 'success');
         } else {
-            this.showMessage('Event not found. Please check the Event ID.', 'error');
+            this.showMessage('Event not found. Please check the Event ID or URL.', 'error');
         }
+    }
+
+    // Extract event ID from input (handles both event ID and full URL)
+    extractEventId(input) {
+        if (!input) return null;
+        
+        // If it's already just an event ID (8 characters, alphanumeric)
+        if (/^[A-Z0-9]{8}$/.test(input.toUpperCase())) {
+            return input.toUpperCase();
+        }
+        
+        // If it's a URL, try to extract the event ID from query parameters
+        try {
+            const url = new URL(input);
+            const eventParam = url.searchParams.get('event');
+            if (eventParam && /^[A-Z0-9]{8}$/.test(eventParam.toUpperCase())) {
+                return eventParam.toUpperCase();
+            }
+        } catch (e) {
+            // If URL parsing fails, try to extract from the path or just the input
+            const match = input.match(/[A-Z0-9]{8}/i);
+            if (match) {
+                return match[0].toUpperCase();
+            }
+        }
+        
+        return null;
     }
 
     // Display the event view with cars and booking options
@@ -200,10 +278,21 @@ class GroupRideApp {
 
         const event = this.events[this.currentEventId];
         document.getElementById('current-event-name').textContent = event.name;
+        document.getElementById('current-event-id').textContent = this.currentEventId;
         
-        // Show event view section
+        // Format and display date and time
+        const formattedDate = this.formatDate(event.date);
+        const formattedTime = this.formatTime(event.time);
+        document.getElementById('current-event-date').textContent = formattedDate;
+        document.getElementById('current-event-time').textContent = formattedTime;
+        
+        // Update URL with event ID for sharing
+        this.updateURL(this.currentEventId);
+        
+        // Show event view section and hide creation sections
         document.getElementById('event-view').classList.remove('hidden');
         document.getElementById('join-event').classList.add('hidden');
+        document.getElementById('create-event').classList.add('hidden');
 
         // Display cars
         this.displayCars();
@@ -219,53 +308,98 @@ class GroupRideApp {
             return;
         }
 
-        carsList.innerHTML = event.cars.map(car => `
-            <div class="car-item">
-                <h3>${car.carModel} - ${car.driverName}</h3>
-                <div class="seat-info">
-                    <span class="seat-count">${car.availableSeats - car.occupiedSeats} seats available</span>
-                    <button onclick="app.bookSeat(${car.id})" ${car.availableSeats - car.occupiedSeats === 0 ? 'disabled' : ''}>
-                        Book Seat
-                    </button>
-                </div>
-                ${car.passengers.length > 0 ? `
-                    <div class="passengers">
-                        <strong>Passengers:</strong>
-                        <ul>
-                            ${car.passengers.map((passenger, index) => `
-                                <li>
-                                    <span>${passenger}</span>
-                                    <button onclick="app.freeSeat(${car.id}, ${index})" class="free-seat-btn" title="Free this seat">
-                                        ✕
-                                    </button>
-                                </li>
-                            `).join('')}
-                        </ul>
-                    </div>
-                ` : ''}
+        const totalSeats = event.cars.reduce((sum, car) => sum + car.availableSeats, 0);
+        const occupiedSeats = event.cars.reduce((sum, car) => sum + car.occupiedSeats, 0);
+        const availableSeats = totalSeats - occupiedSeats;
+
+        carsList.innerHTML = `
+            <div class="cars-summary">
+                <h3>Available Cars (${event.cars.length})</h3>
+                <p class="summary-stats">
+                    <span class="stat">${totalSeats} total seats</span>
+                    <span class="stat">${occupiedSeats} occupied</span>
+                    <span class="stat highlight">${availableSeats} available</span>
+                </p>
+                <button onclick="app.showAddCarForm()" class="add-car-btn">
+                    Add Car
+                </button>
             </div>
-        `).join('');
+            ${event.cars.map((car, index) => `
+                <div class="car-item">
+                    <div class="car-header">
+                        <h4>Car #${index + 1}: ${car.carModel}</h4>
+                        <div class="car-actions">
+                        <span class="driver-badge">${car.driverName}</span>
+                        <button onclick="app.removeCar(${car.id})" class="remove-car-btn" title="Remove this car">
+                            Remove
+                        </button>
+                        </div>
+                    </div>
+                    
+                    <div class="car-layout">
+                        <div class="seats-container">
+                            ${this.generateIsometricSeats(car)}
+                        </div>
+                    </div>
+                </div>
+            `).join('')}
+        `;
+    }
+
+    // Generate compact seat layout
+    generateIsometricSeats(car) {
+        const totalSeats = car.availableSeats;
+        const occupiedSeats = car.occupiedSeats;
+        
+        let seatsHTML = '';
+        
+        for (let i = 0; i < totalSeats; i++) {
+            const isOccupied = i < occupiedSeats;
+            const passengerName = isOccupied ? car.passengers[i] : '';
+            const seatClass = isOccupied ? 'seat-box occupied' : 'seat-box available';
+            
+            seatsHTML += `
+                <div class="${seatClass}" onclick="${isOccupied ? `app.freeSeat(${car.id}, ${i})` : `app.bookSeat(${car.id})`}" title="${isOccupied ? `Free seat for ${passengerName}` : 'Book this seat'}">
+                    <div class="seat-content">
+                        <div class="seat-number">${i + 1}</div>
+                        ${isOccupied ? `<div class="passenger-name">${passengerName}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+        
+        return seatsHTML;
     }
 
     // Book a seat in a specific car
     bookSeat(carId) {
-        const passengerName = prompt('Enter your name:');
-        if (!passengerName || !passengerName.trim()) {
+        this.currentBookingCarId = carId;
+        document.getElementById('passenger-name-input').value = '';
+        document.getElementById('passenger-modal').classList.remove('hidden');
+        document.getElementById('passenger-name-input').focus();
+    }
+
+    // Confirm booking from modal
+    confirmBooking() {
+        const passengerName = document.getElementById('passenger-name-input').value.trim();
+        if (!passengerName) {
             this.showMessage('Please enter a valid name', 'error');
             return;
         }
 
         const event = this.events[this.currentEventId];
-        const car = event.cars.find(c => c.id === carId);
+        const car = event.cars.find(c => c.id === this.currentBookingCarId);
 
         if (car && car.availableSeats > car.occupiedSeats) {
-            car.passengers.push(passengerName.trim());
+            car.passengers.push(passengerName);
             car.occupiedSeats++;
             this.saveEvents();
             this.displayCars();
-            this.showMessage(`Seat booked for ${passengerName.trim()}!`, 'success');
+            this.showMessage(`Seat booked for ${passengerName}!`, 'success');
+            this.hidePassengerModal();
         } else {
             this.showMessage('No seats available in this car.', 'error');
+            this.hidePassengerModal();
         }
     }
 
@@ -277,17 +411,46 @@ class GroupRideApp {
         if (car && car.passengers[passengerIndex]) {
             const passengerName = car.passengers[passengerIndex];
             
-            // Confirm the action
-            if (confirm(`Are you sure you want to free the seat for ${passengerName}?`)) {
-                // Remove passenger and decrease occupied seats
-                car.passengers.splice(passengerIndex, 1);
-                car.occupiedSeats--;
-                
-                // Save changes
-                this.saveEvents();
-                this.displayCars();
-                this.showMessage(`Seat freed for ${passengerName}`, 'success');
+            // Store the action details for confirmation
+            this.pendingAction = {
+                type: 'freeSeat',
+                carId: carId,
+                passengerIndex: passengerIndex,
+                passengerName: passengerName
+            };
+            
+            // Show confirmation modal
+            document.getElementById('confirm-title').textContent = 'Free Seat';
+            document.getElementById('confirm-message').textContent = `Are you sure you want to free the seat for ${passengerName}?`;
+            document.getElementById('confirm-modal').classList.remove('hidden');
+        }
+    }
+
+    // Remove a car from the event
+    removeCar(carId) {
+        const event = this.events[this.currentEventId];
+        const car = event.cars.find(c => c.id === carId);
+        
+        if (car) {
+            const carInfo = `${car.carModel} (${car.driverName})`;
+            const hasPassengers = car.passengers.length > 0;
+            
+            // Store the action details for confirmation
+            this.pendingAction = {
+                type: 'removeCar',
+                carId: carId,
+                carInfo: carInfo,
+                hasPassengers: hasPassengers
+            };
+            
+            // Show confirmation modal
+            document.getElementById('confirm-title').textContent = 'Remove Car';
+            let message = `Are you sure you want to remove ${carInfo}?`;
+            if (hasPassengers) {
+                message += `\n\nThis will also remove all ${car.passengers.length} passenger(s) from this car.`;
             }
+            document.getElementById('confirm-message').textContent = message;
+            document.getElementById('confirm-modal').classList.remove('hidden');
         }
     }
 
@@ -328,14 +491,22 @@ class GroupRideApp {
     resetToCreateEvent() {
         this.currentEventId = null;
         
-        // Hide all sections
+        // Clear URL
+        this.updateURL(null);
+        
+        // Hide all event-related sections
         document.getElementById('event-details').classList.add('hidden');
         document.getElementById('car-registration').classList.add('hidden');
         document.getElementById('event-view').classList.add('hidden');
         
-        // Show create event and join event
+        // Show create event and join event sections
         document.getElementById('create-event').classList.remove('hidden');
         document.getElementById('join-event').classList.remove('hidden');
+        
+        // Restore original car registration title
+        const carSection = document.getElementById('car-registration');
+        const title = carSection.querySelector('h2');
+        title.textContent = 'Register Your Car';
         
         // Clear forms
         document.getElementById('event-form').reset();
@@ -357,6 +528,67 @@ class GroupRideApp {
         this.showMessage('Event link copied to clipboard!', 'success');
     }
 
+    // Copy current event ID to clipboard
+    copyCurrentEventId() {
+        const eventId = this.currentEventId;
+        const shareUrl = `${window.location.origin}${window.location.pathname}?event=${eventId}`;
+        
+        navigator.clipboard.writeText(shareUrl).then(() => {
+            this.showMessage('Event link copied to clipboard!', 'success');
+        }).catch(() => {
+            // Fallback for older browsers
+            const textArea = document.createElement('textarea');
+            textArea.value = shareUrl;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            this.showMessage('Event link copied to clipboard!', 'success');
+        });
+    }
+
+    // Update URL with event ID for sharing
+    updateURL(eventId) {
+        const url = new URL(window.location);
+        
+        if (eventId) {
+            url.searchParams.set('event', eventId);
+        } else {
+            url.searchParams.delete('event');
+        }
+        
+        // Update URL without page reload
+        window.history.pushState({}, '', url);
+    }
+
+    // Show add car form
+    showAddCarForm() {
+        // Update the section title to indicate we're adding another car
+        const carSection = document.getElementById('car-registration');
+        const title = carSection.querySelector('h2');
+        title.textContent = 'Add Another Car';
+        
+        // Hide event view and show only car registration
+        document.getElementById('event-view').classList.add('hidden');
+        carSection.classList.remove('hidden');
+        
+        // Focus on the first input
+        setTimeout(() => {
+            document.getElementById('driver-name').focus();
+        }, 100);
+    }
+
+    // Cancel adding a car and return to event view
+    cancelAddCar() {
+        // Clear the form
+        document.getElementById('car-form').reset();
+        this.clearFieldErrors();
+        
+        // Hide car registration and show event view
+        document.getElementById('car-registration').classList.add('hidden');
+        this.displayEventView();
+    }
+
     // Show a message to the user
     showMessage(message, type) {
         // Remove existing messages
@@ -376,6 +608,73 @@ class GroupRideApp {
         setTimeout(() => {
             messageDiv.remove();
         }, 3000);
+    }
+
+    // Format date for display
+    formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    }
+
+    // Format time for display
+    formatTime(timeString) {
+        const [hours, minutes] = timeString.split(':');
+        const date = new Date();
+        date.setHours(parseInt(hours), parseInt(minutes));
+        return date.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+    }
+
+    // Modal management methods
+    hidePassengerModal() {
+        document.getElementById('passenger-modal').classList.add('hidden');
+        this.currentBookingCarId = null;
+    }
+
+    hideConfirmModal() {
+        document.getElementById('confirm-modal').classList.add('hidden');
+        this.pendingAction = null;
+    }
+
+    confirmAction() {
+        if (!this.pendingAction) return;
+
+        const { type, carId, passengerIndex, passengerName, carInfo, hasPassengers } = this.pendingAction;
+        const event = this.events[this.currentEventId];
+
+        if (type === 'freeSeat') {
+            const car = event.cars.find(c => c.id === carId);
+            if (car && car.passengers[passengerIndex]) {
+                car.passengers.splice(passengerIndex, 1);
+                car.occupiedSeats--;
+                this.saveEvents();
+                this.displayCars();
+                this.showMessage(`Seat freed for ${passengerName}`, 'success');
+            }
+        } else if (type === 'removeCar') {
+            const carIndex = event.cars.findIndex(c => c.id === carId);
+            if (carIndex !== -1) {
+                event.cars.splice(carIndex, 1);
+                this.saveEvents();
+                this.displayCars();
+                
+                if (hasPassengers) {
+                    this.showMessage(`${carInfo} and all passengers removed`, 'success');
+                } else {
+                    this.showMessage(`${carInfo} removed`, 'success');
+                }
+            }
+        }
+
+        this.hideConfirmModal();
     }
 }
 
