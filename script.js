@@ -1,25 +1,11 @@
-// Simple data storage using localStorage
+// Import Supabase client and database service
+import { supabase, DatabaseService } from './supabase.js'
+
+// Simple data storage using Supabase
 class GroupRideApp {
     constructor() {
         this.currentEventId = null;
-        this.events = this.loadEvents();
         this.initializeEventListeners();
-    }
-
-    // Load events from localStorage
-    loadEvents() {
-        const stored = localStorage.getItem('groupRideEvents');
-        return stored ? JSON.parse(stored) : {};
-    }
-
-    // Save events to localStorage
-    saveEvents() {
-        localStorage.setItem('groupRideEvents', JSON.stringify(this.events));
-    }
-
-    // Generate a simple event ID
-    generateEventId() {
-        return Math.random().toString(36).substr(2, 8).toUpperCase();
     }
 
     // Initialize all event listeners
@@ -100,8 +86,13 @@ class GroupRideApp {
         });
     }
 
+    // Generate a simple event ID
+    generateEventId() {
+        return Math.random().toString(36).substr(2, 8).toUpperCase();
+    }
+
     // Create a new event
-    createEvent() {
+    async createEvent() {
         const eventName = document.getElementById('event-name').value.trim();
         const eventDate = document.getElementById('event-date').value;
         const eventTime = document.getElementById('event-time').value;
@@ -132,40 +123,48 @@ class GroupRideApp {
         // Clear any previous errors
         this.clearFieldErrors();
 
-        // Generate unique event ID
-        let eventId;
-        do {
-            eventId = this.generateEventId();
-        } while (this.events[eventId]);
+        try {
+            // Generate unique event ID
+            let eventId;
+            let exists = true;
+            while (exists) {
+                eventId = this.generateEventId();
+                try {
+                    await DatabaseService.getEvent(eventId);
+                    exists = true; // Event exists, try again
+                } catch (error) {
+                    exists = false; // Event doesn't exist, we can use this ID
+                }
+            }
 
-        // Create event object
-        const event = {
-            id: eventId,
-            name: eventName,
-            date: eventDate,
-            time: eventTime,
-            cars: [],
-            passengers: []
-        };
+            // Create event object
+            const event = {
+                id: eventId,
+                name: eventName,
+                date: eventDate,
+                time: eventTime
+            };
 
-        // Save event
-        this.events[eventId] = event;
-        this.saveEvents();
+            // Save event to database
+            await DatabaseService.createEvent(event);
 
-        // Show event details
-        this.showEventDetails(eventId);
-        this.showMessage('Event created successfully!', 'success');
-        
-        // Auto-copy event ID
-        setTimeout(() => {
-            this.copyEventLink();
-        }, 1000);
+            // Show event details
+            this.showEventDetails(eventId);
+            this.showMessage('Event created successfully!', 'success');
+            
+            // Auto-copy event ID
+            setTimeout(() => {
+                this.copyEventLink();
+            }, 1000);
+        } catch (error) {
+            console.error('Error creating event:', error);
+            this.showMessage('Failed to create event. Please try again.', 'error');
+        }
     }
 
     // Show event details after creation
     showEventDetails(eventId) {
         this.currentEventId = eventId;
-        const event = this.events[eventId];
         
         // Update display
         document.getElementById('event-id-display').textContent = eventId;
@@ -179,7 +178,7 @@ class GroupRideApp {
     }
 
     // Register a car for the current event
-    registerCar() {
+    async registerCar() {
         if (!this.currentEventId) {
             this.showMessage('Please create or join an event first!', 'error');
             return;
@@ -208,39 +207,48 @@ class GroupRideApp {
         // Clear any previous errors
         this.clearFieldErrors();
 
-        const car = {
-            id: Date.now(), // Simple ID generation
-            driverName,
-            carModel,
-            availableSeats,
-            occupiedSeats: 0,
-            passengers: []
-        };
+        try {
+            const car = {
+                event_id: this.currentEventId,
+                driver_name: driverName,
+                car_model: carModel,
+                available_seats: availableSeats,
+                occupied_seats: 0
+            };
 
-        // Add car to event
-        this.events[this.currentEventId].cars.push(car);
-        this.saveEvents();
+            // Add car to database
+            await DatabaseService.createCar(car);
 
-        // Clear form
-        document.getElementById('car-form').reset();
+            // Clear form
+            document.getElementById('car-form').reset();
 
-        // Hide car registration and show event view
-        document.getElementById('car-registration').classList.add('hidden');
-        this.displayEventView();
-        this.showMessage('Car registered successfully!', 'success');
+            // Hide car registration and show event view
+            document.getElementById('car-registration').classList.add('hidden');
+            this.displayEventView();
+            this.showMessage('Car registered successfully!', 'success');
+        } catch (error) {
+            console.error('Error registering car:', error);
+            this.showMessage('Failed to register car. Please try again.', 'error');
+        }
     }
 
     // Join an existing event
-    joinEvent() {
+    async joinEvent() {
         const input = document.getElementById('join-event-id').value.trim();
         
         // Extract event ID from input (handles both event ID and full URL)
         const eventId = this.extractEventId(input);
         
-        if (eventId && this.events[eventId]) {
+        if (!eventId) {
+            this.showMessage('Invalid event ID or URL format.', 'error');
+            return;
+        }
+
+        try {
+            await DatabaseService.getEvent(eventId);
             this.currentEventId = eventId;
             this.displayEventView();
-        } else {
+        } catch (error) {
             this.showMessage('Event not found. Please check the Event ID or URL.', 'error');
         }
     }
@@ -273,89 +281,103 @@ class GroupRideApp {
     }
 
     // Display the event view with cars and booking options
-    displayEventView() {
+    async displayEventView() {
         if (!this.currentEventId) return;
 
-        const event = this.events[this.currentEventId];
-        document.getElementById('current-event-name').textContent = event.name;
-        document.getElementById('current-event-id').textContent = this.currentEventId;
-        
-        // Format and display date and time
-        const formattedDate = this.formatDate(event.date);
-        const formattedTime = this.formatTime(event.time);
-        document.getElementById('current-event-date').textContent = formattedDate;
-        document.getElementById('current-event-time').textContent = formattedTime;
-        
-        // Update URL with event ID for sharing
-        this.updateURL(this.currentEventId);
-        
-        // Show event view section and hide creation sections
-        document.getElementById('event-view').classList.remove('hidden');
-        document.getElementById('join-event').classList.add('hidden');
-        document.getElementById('create-event').classList.add('hidden');
+        try {
+            // First, run cleanup to remove expired events
+            await this.cleanupExpiredEvents();
+            
+            const event = await DatabaseService.getEvent(this.currentEventId);
+            document.getElementById('current-event-name').textContent = event.name;
+            document.getElementById('current-event-id').textContent = this.currentEventId;
+            
+            // Format and display date and time
+            const formattedDate = this.formatDate(event.date);
+            const formattedTime = this.formatTime(event.time);
+            document.getElementById('current-event-date').textContent = formattedDate;
+            document.getElementById('current-event-time').textContent = formattedTime;
+            
+            // Update URL with event ID for sharing
+            this.updateURL(this.currentEventId);
+            
+            // Show event view section and hide creation sections
+            document.getElementById('event-view').classList.remove('hidden');
+            document.getElementById('join-event').classList.add('hidden');
+            document.getElementById('create-event').classList.add('hidden');
 
-        // Display cars
-        this.displayCars();
+            // Display cars
+            await this.displayCars();
+        } catch (error) {
+            console.error('Error loading event:', error);
+            this.showMessage('Failed to load event. Please try again.', 'error');
+        }
     }
 
     // Display all cars for the current event
-    displayCars() {
-        const event = this.events[this.currentEventId];
-        const carsList = document.getElementById('cars-list');
-        
-        if (event.cars.length === 0) {
-            carsList.innerHTML = '<p>No cars registered yet. Be the first to register your car!</p>';
-            return;
-        }
+    async displayCars() {
+        try {
+            const cars = await DatabaseService.getCarsForEvent(this.currentEventId);
+            const carsList = document.getElementById('cars-list');
+            
+            if (cars.length === 0) {
+                carsList.innerHTML = '<p>No cars registered yet. Be the first to register your car!</p>';
+                return;
+            }
 
-        const totalSeats = event.cars.reduce((sum, car) => sum + car.availableSeats, 0);
-        const occupiedSeats = event.cars.reduce((sum, car) => sum + car.occupiedSeats, 0);
-        const availableSeats = totalSeats - occupiedSeats;
+            const totalSeats = cars.reduce((sum, car) => sum + car.available_seats, 0);
+            const occupiedSeats = cars.reduce((sum, car) => sum + car.occupied_seats, 0);
+            const availableSeats = totalSeats - occupiedSeats;
 
-        carsList.innerHTML = `
-            <div class="cars-summary">
-                <h3>Available Cars (${event.cars.length})</h3>
-                <p class="summary-stats">
-                    <span class="stat">${totalSeats} total seats</span>
-                    <span class="stat">${occupiedSeats} occupied</span>
-                    <span class="stat highlight">${availableSeats} available</span>
-                </p>
-                <button onclick="app.showAddCarForm()" class="add-car-btn">
-                    Add Car
-                </button>
-            </div>
-            ${event.cars.map((car, index) => `
-                <div class="car-item">
-                    <div class="car-header">
-                        <h4>Car #${index + 1}: ${car.carModel}</h4>
-                        <div class="car-actions">
-                        <span class="driver-badge">${car.driverName}</span>
-                        <button onclick="app.removeCar(${car.id})" class="remove-car-btn" title="Remove this car">
-                            Remove
-                        </button>
-                        </div>
-                    </div>
-                    
-                    <div class="car-layout">
-                        <div class="seats-container">
-                            ${this.generateIsometricSeats(car)}
-                        </div>
-                    </div>
+            carsList.innerHTML = `
+                <div class="cars-summary">
+                    <h3>Available Cars (${cars.length})</h3>
+                    <p class="summary-stats">
+                        <span class="stat">${totalSeats} total seats</span>
+                        <span class="stat">${occupiedSeats} occupied</span>
+                        <span class="stat highlight">${availableSeats} available</span>
+                    </p>
+                    <button onclick="app.showAddCarForm()" class="add-car-btn">
+                        Add Car
+                    </button>
                 </div>
-            `).join('')}
-        `;
+                ${cars.map((car, index) => `
+                    <div class="car-item">
+                        <div class="car-header">
+                            <h4>Car #${index + 1}: ${car.car_model}</h4>
+                            <div class="car-actions">
+                            <span class="driver-badge">${car.driver_name}</span>
+                            <button onclick="app.removeCar(${car.id})" class="remove-car-btn" title="Remove this car">
+                                Remove
+                            </button>
+                            </div>
+                        </div>
+                        
+                        <div class="car-layout">
+                            <div class="seats-container">
+                                ${this.generateSeats(car)}
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+        } catch (error) {
+            console.error('Error loading cars:', error);
+            this.showMessage('Failed to load cars. Please try again.', 'error');
+        }
     }
 
-    // Generate compact seat layout
-    generateIsometricSeats(car) {
-        const totalSeats = car.availableSeats;
-        const occupiedSeats = car.occupiedSeats;
+    // Generate seat layout
+    generateSeats(car) {
+        const totalSeats = car.available_seats;
+        const passengers = car.passengers || [];
         
         let seatsHTML = '';
         
         for (let i = 0; i < totalSeats; i++) {
-            const isOccupied = i < occupiedSeats;
-            const passengerName = isOccupied ? car.passengers[i] : '';
+            const passenger = passengers.find(p => p.seat_index === i);
+            const isOccupied = !!passenger;
+            const passengerName = passenger ? passenger.name : '';
             const seatClass = isOccupied ? 'seat-box occupied' : 'seat-box available';
             
             seatsHTML += `
@@ -380,77 +402,102 @@ class GroupRideApp {
     }
 
     // Confirm booking from modal
-    confirmBooking() {
+    async confirmBooking() {
         const passengerName = document.getElementById('passenger-name-input').value.trim();
         if (!passengerName) {
             this.showMessage('Please enter a valid name', 'error');
             return;
         }
 
-        const event = this.events[this.currentEventId];
-        const car = event.cars.find(c => c.id === this.currentBookingCarId);
+        try {
+            const cars = await DatabaseService.getCarsForEvent(this.currentEventId);
+            const car = cars.find(c => c.id === this.currentBookingCarId);
 
-        if (car && car.availableSeats > car.occupiedSeats) {
-            car.passengers.push(passengerName);
-            car.occupiedSeats++;
-            this.saveEvents();
-            this.displayCars();
-            this.showMessage(`Seat booked for ${passengerName}!`, 'success');
-            this.hidePassengerModal();
-        } else {
-            this.showMessage('No seats available in this car.', 'error');
-            this.hidePassengerModal();
+            if (car && car.available_seats > car.occupied_seats) {
+                // Add passenger to database
+                await DatabaseService.addPassenger({
+                    car_id: this.currentBookingCarId,
+                    name: passengerName,
+                    seat_index: car.occupied_seats
+                });
+
+                // Update car occupied seats
+                await DatabaseService.updateCar(this.currentBookingCarId, {
+                    occupied_seats: car.occupied_seats + 1
+                });
+
+                // Refresh display
+                await this.displayCars();
+                this.showMessage(`Seat booked for ${passengerName}!`, 'success');
+                this.hidePassengerModal();
+            } else {
+                this.showMessage('No seats available in this car.', 'error');
+                this.hidePassengerModal();
+            }
+        } catch (error) {
+            console.error('Error booking seat:', error);
+            this.showMessage('Failed to book seat. Please try again.', 'error');
         }
     }
 
     // Free a seat in a specific car
-    freeSeat(carId, passengerIndex) {
-        const event = this.events[this.currentEventId];
-        const car = event.cars.find(c => c.id === carId);
-        
-        if (car && car.passengers[passengerIndex]) {
-            const passengerName = car.passengers[passengerIndex];
+    async freeSeat(carId, seatIndex) {
+        try {
+            const cars = await DatabaseService.getCarsForEvent(this.currentEventId);
+            const car = cars.find(c => c.id === carId);
+            const passenger = car.passengers.find(p => p.seat_index === seatIndex);
             
-            // Store the action details for confirmation
-            this.pendingAction = {
-                type: 'freeSeat',
-                carId: carId,
-                passengerIndex: passengerIndex,
-                passengerName: passengerName
-            };
-            
-            // Show confirmation modal
-            document.getElementById('confirm-title').textContent = 'Free Seat';
-            document.getElementById('confirm-message').textContent = `Are you sure you want to free the seat for ${passengerName}?`;
-            document.getElementById('confirm-modal').classList.remove('hidden');
+            if (passenger) {
+                // Store the action details for confirmation
+                this.pendingAction = {
+                    type: 'freeSeat',
+                    carId: carId,
+                    seatIndex: seatIndex,
+                    passengerId: passenger.id,
+                    passengerName: passenger.name
+                };
+                
+                // Show confirmation modal
+                document.getElementById('confirm-title').textContent = 'Free Seat';
+                document.getElementById('confirm-message').textContent = `Are you sure you want to free the seat for ${passenger.name}?`;
+                document.getElementById('confirm-modal').classList.remove('hidden');
+            }
+        } catch (error) {
+            console.error('Error freeing seat:', error);
+            this.showMessage('Failed to free seat. Please try again.', 'error');
         }
     }
 
     // Remove a car from the event
-    removeCar(carId) {
-        const event = this.events[this.currentEventId];
-        const car = event.cars.find(c => c.id === carId);
-        
-        if (car) {
-            const carInfo = `${car.carModel} (${car.driverName})`;
-            const hasPassengers = car.passengers.length > 0;
+    async removeCar(carId) {
+        try {
+            const cars = await DatabaseService.getCarsForEvent(this.currentEventId);
+            const car = cars.find(c => c.id === carId);
             
-            // Store the action details for confirmation
-            this.pendingAction = {
-                type: 'removeCar',
-                carId: carId,
-                carInfo: carInfo,
-                hasPassengers: hasPassengers
-            };
-            
-            // Show confirmation modal
-            document.getElementById('confirm-title').textContent = 'Remove Car';
-            let message = `Are you sure you want to remove ${carInfo}?`;
-            if (hasPassengers) {
-                message += `\n\nThis will also remove all ${car.passengers.length} passenger(s) from this car.`;
+            if (car) {
+                const carInfo = `${car.car_model} (${car.driver_name})`;
+                const hasPassengers = car.passengers && car.passengers.length > 0;
+                
+                // Store the action details for confirmation
+                this.pendingAction = {
+                    type: 'removeCar',
+                    carId: carId,
+                    carInfo: carInfo,
+                    hasPassengers: hasPassengers
+                };
+                
+                // Show confirmation modal
+                document.getElementById('confirm-title').textContent = 'Remove Car';
+                let message = `Are you sure you want to remove ${carInfo}?`;
+                if (hasPassengers) {
+                    message += `\n\nThis will also remove all ${car.passengers.length} passenger(s) from this car.`;
+                }
+                document.getElementById('confirm-message').textContent = message;
+                document.getElementById('confirm-modal').classList.remove('hidden');
             }
-            document.getElementById('confirm-message').textContent = message;
-            document.getElementById('confirm-modal').classList.remove('hidden');
+        } catch (error) {
+            console.error('Error removing car:', error);
+            this.showMessage('Failed to remove car. Please try again.', 'error');
         }
     }
 
@@ -633,6 +680,19 @@ class GroupRideApp {
         });
     }
 
+    // Cleanup expired events (runs automatically)
+    async cleanupExpiredEvents() {
+        try {
+            const result = await DatabaseService.cleanupExpiredEvents();
+            if (result && result.length > 0 && result[0].deleted_count > 0) {
+                console.log(`Cleaned up ${result[0].deleted_count} expired events`);
+            }
+        } catch (error) {
+            console.error('Error cleaning up expired events:', error);
+            // Don't show error to user as this is a background operation
+        }
+    }
+
     // Modal management methods
     hidePassengerModal() {
         document.getElementById('passenger-modal').classList.add('hidden');
@@ -644,27 +704,32 @@ class GroupRideApp {
         this.pendingAction = null;
     }
 
-    confirmAction() {
+    async confirmAction() {
         if (!this.pendingAction) return;
 
-        const { type, carId, passengerIndex, passengerName, carInfo, hasPassengers } = this.pendingAction;
-        const event = this.events[this.currentEventId];
+        const { type, carId, seatIndex, passengerId, passengerName, carInfo, hasPassengers } = this.pendingAction;
 
-        if (type === 'freeSeat') {
-            const car = event.cars.find(c => c.id === carId);
-            if (car && car.passengers[passengerIndex]) {
-                car.passengers.splice(passengerIndex, 1);
-                car.occupiedSeats--;
-                this.saveEvents();
-                this.displayCars();
+        try {
+            if (type === 'freeSeat') {
+                // Remove passenger from database
+                await DatabaseService.removePassenger(passengerId);
+                
+                // Update car occupied seats
+                const cars = await DatabaseService.getCarsForEvent(this.currentEventId);
+                const car = cars.find(c => c.id === carId);
+                await DatabaseService.updateCar(carId, {
+                    occupied_seats: car.occupied_seats - 1
+                });
+
+                // Refresh display
+                await this.displayCars();
                 this.showMessage(`Seat freed for ${passengerName}`, 'success');
-            }
-        } else if (type === 'removeCar') {
-            const carIndex = event.cars.findIndex(c => c.id === carId);
-            if (carIndex !== -1) {
-                event.cars.splice(carIndex, 1);
-                this.saveEvents();
-                this.displayCars();
+            } else if (type === 'removeCar') {
+                // Remove car (passengers will be deleted automatically due to CASCADE)
+                await DatabaseService.deleteCar(carId);
+                
+                // Refresh display
+                await this.displayCars();
                 
                 if (hasPassengers) {
                     this.showMessage(`${carInfo} and all passengers removed`, 'success');
@@ -672,26 +737,38 @@ class GroupRideApp {
                     this.showMessage(`${carInfo} removed`, 'success');
                 }
             }
-        }
 
-        this.hideConfirmModal();
+            this.hideConfirmModal();
+        } catch (error) {
+            console.error('Error confirming action:', error);
+            this.showMessage('Failed to complete action. Please try again.', 'error');
+        }
     }
 }
 
-    // Initialize the app when page loads
-    document.addEventListener('DOMContentLoaded', () => {
-        window.app = new GroupRideApp();
-        
-        // Set today's date as default
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('event-date').value = today;
-        
-        // Check if there's an event ID in the URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const eventId = urlParams.get('event');
-        
-        if (eventId && window.app.events[eventId]) {
+// Initialize the app when page loads
+document.addEventListener('DOMContentLoaded', async () => {
+    window.app = new GroupRideApp();
+    
+    // Set today's date as default
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('event-date').value = today;
+    
+    // Run cleanup on app startup
+    await window.app.cleanupExpiredEvents();
+    
+    // Check if there's an event ID in the URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const eventId = urlParams.get('event');
+    
+    if (eventId) {
+        try {
+            await DatabaseService.getEvent(eventId);
             window.app.currentEventId = eventId;
-            window.app.displayEventView();
+            await window.app.displayEventView();
+        } catch (error) {
+            console.error('Error loading event from URL:', error);
+            // Event not found, continue with normal flow
         }
-    });
+    }
+});
