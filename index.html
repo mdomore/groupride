@@ -10,7 +10,7 @@
     <div class="container">
         <header>
             <h1>GroupRide</h1>
-            <p>Share rides, save money, make friends!</p>
+            <p>Share rides, save money, make friends, don't forget a child!</p>
         </header>
 
         <main>
@@ -21,6 +21,10 @@
                     <div class="form-group">
                         <label for="event-name">Event Name:</label>
                         <input type="text" id="event-name" required placeholder="e.g., Company Meeting">
+                    </div>
+                    <div class="form-group">
+                        <label for="event-description">Event Description:</label>
+                        <textarea id="event-description" placeholder="e.g., Soccer practice pickup."></textarea>
                     </div>
                     <div class="form-group">
                         <label for="event-date">Date:</label>
@@ -43,6 +47,14 @@
                     <div class="form-group">
                         <label for="driver-name">Driver Name:</label>
                         <input type="text" id="driver-name" required placeholder="Your name">
+                    </div>
+                    <div class="form-group">
+                        <label for="driver-phone">Driver Phone:</label>
+                        <input type="tel" id="driver-phone" required placeholder="Your phone number">
+                    </div>
+                    <div class="form-group">
+                        <label for="driver-email">Driver Email:</label>
+                        <input type="email" id="driver-email" required placeholder="Your email address">
                     </div>
                     <div class="form-group">
                         <label for="car-model">Car Model:</label>
@@ -74,15 +86,44 @@
                 </form>
             </section>
 
+            <!-- Edit Event Section -->
+            <section id="edit-event" class="card hidden">
+                <h2>Edit Event</h2>
+                <form id="edit-event-form">
+                    <div class="form-group">
+                        <label for="edit-event-name">Event Name:</label>
+                        <input type="text" id="edit-event-name" required placeholder="e.g., Company Meeting">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-event-description">Event Description:</label>
+                        <textarea id="edit-event-description" placeholder="e.g., Soccer practice pickup."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-event-date">Date:</label>
+                        <input type="date" id="edit-event-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-event-time">Time:</label>
+                        <input type="time" id="edit-event-time" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit">Save Changes</button>
+                        <button type="button" id="cancel-edit-event" class="secondary-btn">Cancel</button>
+                    </div>
+                </form>
+            </section>
+
             <!-- Event View Section (hidden initially) -->
             <section id="event-view" class="card hidden">
                 <div class="event-navigation">
                     <button id="back-to-create" class="secondary-btn">← Create New Event</button>
+                    <button id="edit-event-btn" class="secondary-btn">Edit Event</button>
                 </div>
                 <div class="event-header">
                     <div class="event-title-section">
                         <h2 id="current-event-name"></h2>
                         <div class="event-datetime-display">
+                            <span id="current-event-description" class="event-description"></span>
                             <span id="current-event-date" class="event-date"></span>
                             <span id="current-event-time" class="event-time"></span>
                         </div>

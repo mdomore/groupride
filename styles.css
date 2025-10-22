@@ -95,6 +95,8 @@ header p {
 /* Forms */
 .form-group {
     margin-bottom: 20px;
+    width: 100%;
+    overflow: hidden; /* Prevents overflow on mobile */
 }
 
 label {
@@ -107,7 +109,9 @@ label {
 input[type="text"],
 input[type="date"],
 input[type="time"],
-input[type="number"] {
+input[type="number"],
+input[type="email"],
+input[type="tel"] {
     width: 100%;
     padding: 12px;
     border: 2px solid #e2e8f0;
@@ -120,6 +124,27 @@ input[type="text"]:focus,
 input[type="date"]:focus,
 input[type="time"]:focus,
 input[type="number"]:focus {
+    outline: none;
+    border-color: #0f172a;
+    box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.1);
+}
+
+textarea {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 16px;
+    transition: border-color 0.2s ease;
+}
+
+textarea:focus {
+    outline: none;
+    border-color: #0f172a;
+    box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.1);
+}
+
+textarea:focus-visible {
     outline: none;
     border-color: #0f172a;
     box-shadow: 0 0 0 2px rgba(15, 23, 42, 0.1);
@@ -160,6 +185,25 @@ button:active {
     border-color: #cbd5e0;
 }
 
+/* Edit button style */
+.edit-btn {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.edit-btn:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+}
+
 /* Event navigation */
 .event-navigation {
     margin-bottom: 20px;
@@ -185,7 +229,7 @@ button:active {
     flex-wrap: wrap;
 }
 
-.event-date, .event-time {
+.event-date, .event-time, .event-description {
     font-size: 0.9rem;
     color: #64748b;
     font-weight: 500;
@@ -709,6 +753,25 @@ button:disabled:hover {
     font-size: 0.9rem;
 }
 
+/* Mobile input fixes for iOS Safari */
+input[type="date"],
+input[type="time"] {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-color: white;
+}
+
+/* iOS Safari specific fixes */
+@supports (-webkit-touch-callout: none) {
+    input[type="date"],
+    input[type="time"] {
+        font-size: 16px; /* Prevents zoom on iOS */
+        transform: scale(1);
+        -webkit-transform: scale(1);
+    }
+}
+
 /* Responsive design */
 @media (max-width: 600px) {
     .container {
@@ -721,6 +784,27 @@ button:disabled:hover {
     
     .share-section {
         flex-direction: column;
+    }
+    
+    /* Mobile form inputs */
+    input[type="date"],
+    input[type="time"] {
+        font-size: 16px; /* Prevents zoom on iOS */
+        padding: 14px 12px; /* Slightly larger padding for mobile */
+        min-height: 48px; /* Better touch target */
+        max-width: 100%; /* Prevents overflow */
+        box-sizing: border-box; /* Ensures padding is included in width */
+    }
+    
+    /* Ensure form groups don't overflow */
+    .form-group {
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+    
+    /* Card responsive adjustments */
+    .card {
+        overflow: hidden; /* Prevents content from overflowing card */
     }
     
     /* Event navigation responsive */

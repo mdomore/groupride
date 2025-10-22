@@ -28,6 +28,12 @@ class GroupRideApp {
             this.joinEvent();
         });
 
+        // Edit event form
+        document.getElementById('edit-event-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.editEvent();
+        });
+
 
         // Back to create event button
         document.getElementById('back-to-create').addEventListener('click', () => {
@@ -42,6 +48,16 @@ class GroupRideApp {
         // Cancel add car button
         document.getElementById('cancel-add-car').addEventListener('click', () => {
             this.cancelAddCar();
+        });
+
+        // Edit event button
+        document.getElementById('edit-event-btn').addEventListener('click', () => {
+            this.showEditEventForm();
+        });
+
+        // Cancel edit event button
+        document.getElementById('cancel-edit-event').addEventListener('click', () => {
+            this.cancelEditEvent();
         });
 
         // Modal event listeners
@@ -90,6 +106,7 @@ class GroupRideApp {
     // Create a new event
     async createEvent() {
         const eventName = document.getElementById('event-name').value.trim();
+        const eventDescription = document.getElementById('event-description').value.trim();
         const eventDate = document.getElementById('event-date').value;
         const eventTime = document.getElementById('event-time').value;
 
@@ -137,6 +154,7 @@ class GroupRideApp {
             const event = {
                 id: eventId,
                 name: eventName,
+                description: eventDescription,
                 date: eventDate,
                 time: eventTime
             };
@@ -169,6 +187,8 @@ class GroupRideApp {
         }
 
         const driverName = document.getElementById('driver-name').value.trim();
+        const driverPhone = document.getElementById('driver-phone').value.trim();
+        const driverEmail = document.getElementById('driver-email').value.trim();
         const carModel = document.getElementById('car-model').value.trim();
         const availableSeats = parseInt(document.getElementById('available-seats').value);
 
@@ -195,6 +215,8 @@ class GroupRideApp {
             const car = {
                 event_id: this.currentEventId,
                 driver_name: driverName,
+                driver_phone: driverPhone,
+                driver_email: driverEmail,
                 car_model: carModel,
                 available_seats: availableSeats,
                 occupied_seats: 0
@@ -264,6 +286,107 @@ class GroupRideApp {
         return null;
     }
 
+    // Show edit event form with current event data
+    async showEditEventForm() {
+        if (!this.currentEventId) {
+            this.showMessage('No event to edit!', 'error');
+            return;
+        }
+
+        try {
+            // Get current event data
+            const event = await DatabaseService.getEvent(this.currentEventId);
+            
+            // Pre-fill the form with current event data
+            document.getElementById('edit-event-name').value = event.name;
+            document.getElementById('edit-event-description').value = event.description || '';
+            document.getElementById('edit-event-date').value = event.date;
+            document.getElementById('edit-event-time').value = event.time;
+            
+            // Hide event view and show edit form
+            document.getElementById('event-view').classList.add('hidden');
+            document.getElementById('edit-event').classList.remove('hidden');
+            
+            // Focus on the first input
+            setTimeout(() => {
+                document.getElementById('edit-event-name').focus();
+            }, 100);
+        } catch (error) {
+            console.error('Error loading event for editing:', error);
+            this.showMessage('Failed to load event for editing. Please try again.', 'error');
+        }
+    }
+
+    // Handle edit event form submission
+    async editEvent() {
+        if (!this.currentEventId) {
+            this.showMessage('No event to edit!', 'error');
+            return;
+        }
+
+        const eventName = document.getElementById('edit-event-name').value.trim();
+        const eventDescription = document.getElementById('edit-event-description').value.trim();
+        const eventDate = document.getElementById('edit-event-date').value;
+        const eventTime = document.getElementById('edit-event-time').value;
+
+        // Validate inputs (same validation as create event)
+        if (!eventName) {
+            this.showFieldError('edit-event-name', 'Event name is required');
+            return;
+        }
+
+        if (!eventDate) {
+            this.showFieldError('edit-event-date', 'Event date is required');
+            return;
+        }
+
+        if (!eventTime) {
+            this.showFieldError('edit-event-time', 'Event time is required');
+            return;
+        }
+
+        // Check if date is in the past
+        const eventDateTime = new Date(`${eventDate}T${eventTime}`);
+        if (eventDateTime < new Date()) {
+            this.showFieldError('edit-event-date', 'Event date cannot be in the past');
+            return;
+        }
+
+        // Clear any previous errors
+        this.clearFieldErrors();
+
+        try {
+            // Update event in database
+            const updates = {
+                name: eventName,
+                description: eventDescription,
+                date: eventDate,
+                time: eventTime
+            };
+
+            await DatabaseService.updateEvent(this.currentEventId, updates);
+
+            // Return to event view and refresh
+            this.cancelEditEvent();
+            await this.displayEventView();
+            this.showMessage('Event updated successfully!', 'success');
+        } catch (error) {
+            console.error('Error updating event:', error);
+            this.showMessage('Failed to update event. Please try again.', 'error');
+        }
+    }
+
+    // Cancel edit event and return to event view
+    cancelEditEvent() {
+        // Clear form
+        document.getElementById('edit-event-form').reset();
+        this.clearFieldErrors();
+        
+        // Hide edit form and show event view
+        document.getElementById('edit-event').classList.add('hidden');
+        document.getElementById('event-view').classList.remove('hidden');
+    }
+
     // Display the event view with cars and booking options
     async displayEventView() {
         if (!this.currentEventId) return;
@@ -274,6 +397,13 @@ class GroupRideApp {
             
             const event = await DatabaseService.getEvent(this.currentEventId);
             document.getElementById('current-event-name').textContent = event.name;
+            const descElement = document.getElementById('current-event-description');
+            if (event.description) {
+                descElement.textContent = event.description;
+                descElement.classList.remove('hidden');
+            } else {
+                descElement.classList.add('hidden');
+            }
             document.getElementById('current-event-id').textContent = this.currentEventId;
             
             // Format and display date and time
@@ -305,7 +435,15 @@ class GroupRideApp {
             const carsList = document.getElementById('cars-list');
             
             if (cars.length === 0) {
-                carsList.innerHTML = '<p>No cars registered yet. Be the first to register your car!</p>';
+                carsList.innerHTML = `
+                    <div class="cars-summary">
+                        <h3>No cars registered yet</h3>
+                        <p>Be the first to register your car!</p>
+                        <button onclick="window.app.showAddCarForm()" class="add-car-btn">
+                            Register First Car
+                        </button>
+                    </div>
+                `;
                 return;
             }
 
@@ -321,7 +459,7 @@ class GroupRideApp {
                         <span class="stat">${occupiedSeats} occupied</span>
                         <span class="stat highlight">${availableSeats} available</span>
                     </p>
-                    <button onclick="app.showAddCarForm()" class="add-car-btn">
+                    <button onclick="window.app.showAddCarForm()" class="add-car-btn">
                         Add Car
                     </button>
                 </div>
@@ -331,7 +469,13 @@ class GroupRideApp {
                             <h4>Car #${index + 1}: ${car.car_model}</h4>
                             <div class="car-actions">
                             <span class="driver-badge">${car.driver_name}</span>
-                            <button onclick="app.removeCar(${car.id})" class="remove-car-btn" title="Remove this car">
+                            ${(car.driver_phone || car.driver_email) ? `
+                                <div class="driver-contact">
+                                    ${car.driver_phone ? `<span>${car.driver_phone}</span>` : ''}
+                                    ${car.driver_email ? `<span>${car.driver_email}</span>` : ''}
+                                </div>
+                            ` : ''}
+                            <button onclick="window.app.removeCar(${car.id})" class="remove-car-btn" title="Remove this car">
                                 Remove
                             </button>
                             </div>
@@ -365,7 +509,7 @@ class GroupRideApp {
             const seatClass = isOccupied ? 'seat-box occupied' : 'seat-box available';
             
             seatsHTML += `
-                <div class="${seatClass}" onclick="${isOccupied ? `app.freeSeat(${car.id}, ${i})` : `app.bookSeat(${car.id})`}" title="${isOccupied ? `Free seat for ${passengerName}` : 'Book this seat'}">
+                <div class="${seatClass}" onclick="${isOccupied ? `window.app.freeSeat(${car.id}, ${i})` : `window.app.bookSeat(${car.id})`}" title="${isOccupied ? `Free seat for ${passengerName}` : 'Book this seat'}">
                     <div class="seat-content">
                         <div class="seat-number">${i + 1}</div>
                         ${isOccupied ? `<div class="passenger-name">${passengerName}</div>` : ''}
@@ -528,6 +672,7 @@ class GroupRideApp {
         // Hide all event-related sections
         document.getElementById('car-registration').classList.add('hidden');
         document.getElementById('event-view').classList.add('hidden');
+        document.getElementById('edit-event').classList.add('hidden');
         
         // Show create event and join event sections
         document.getElementById('create-event').classList.remove('hidden');
@@ -556,18 +701,39 @@ class GroupRideApp {
         const eventId = this.currentEventId;
         const shareUrl = `${window.location.origin}${window.location.pathname}?event=${eventId}`;
         
-        navigator.clipboard.writeText(shareUrl).then(() => {
-            this.showMessage('Event link copied to clipboard!', 'success');
-        }).catch(() => {
-            // Fallback for older browsers
-            const textArea = document.createElement('textarea');
-            textArea.value = shareUrl;
-            document.body.appendChild(textArea);
-            textArea.select();
+        // Check if modern clipboard API is available
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                this.showMessage('Event link copied to clipboard!', 'success');
+            }).catch(() => {
+                // If modern API fails, use fallback
+                this.fallbackCopyToClipboard(shareUrl);
+            });
+        } else {
+            // Use fallback for older browsers or non-HTTPS
+            this.fallbackCopyToClipboard(shareUrl);
+        }
+    }
+
+    // Fallback method for copying to clipboard
+    fallbackCopyToClipboard(text) {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
             document.execCommand('copy');
-            document.body.removeChild(textArea);
             this.showMessage('Event link copied to clipboard!', 'success');
-        });
+        } catch (err) {
+            this.showMessage('Failed to copy link. Please copy manually: ' + text, 'error');
+        }
+        
+        document.body.removeChild(textArea);
     }
 
     // Update URL with event ID for sharing
@@ -586,6 +752,9 @@ class GroupRideApp {
 
     // Show add car form
     showAddCarForm() {
+        console.log('showAddCarForm called'); // Debug log
+        console.log('currentEventId:', this.currentEventId); // Debug log
+        
         // Update the section title to indicate we're adding another car
         const carSection = document.getElementById('car-registration');
         const title = carSection.querySelector('h2');
