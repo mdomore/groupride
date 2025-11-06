@@ -1,0 +1,7 @@
+services:
+  app:
+    build: .
+    ports:
+      - "127.0.0.1:8001:80"  # Only accessible via Nginx reverse proxy
+    restart: unless-stopped
+
