@@ -5,11 +5,10 @@ This directory contains all the SQL scripts needed to set up and maintain the Gr
 ## Quick Setup
 
 ### 1. Initial Database Setup
-Run these files in order in your Supabase SQL Editor:
+You have two options depending on whether you want a clean slate or to patch an existing database:
 
-1. **`01-create-tables.sql`** - Creates the main tables (events, cars, passengers)
-2. **`02-cleanup-functions.sql`** - Creates cleanup functions for expired events
-3. **`03-scheduled-cleanup.sql`** - (Optional) Sets up automatic hourly cleanup
+- **Fresh install (wipes data)**: run `00-complete-setup.sql`. This script drops existing GroupRide tables, recreates the latest schema, and installs the cleanup functions.
+- **Safe migration**: run `01-create-tables.sql` followed by `02-cleanup-functions.sql` (and optionally `03-scheduled-cleanup.sql`). The table script only creates missing tables/columns and adjusts policies so it can be re-run without losing data.
 
 ### 2. Manual Setup Steps
 
@@ -21,11 +20,17 @@ Run these files in order in your Supabase SQL Editor:
 
 ## File Descriptions
 
+### `00-complete-setup.sql`
+- Drops any existing GroupRide tables
+- Recreates the full schema (events, cars, ride requests, passengers)
+- Installs cleanup helpers
+- Intended for brand-new or reset environments
+
 ### `01-create-tables.sql`
-- Creates the main database schema
-- Sets up events, cars, and passengers tables
-- Enables Row Level Security (RLS)
-- Creates basic policies for data access
+- Creates the main database schema if it does not exist
+- Backfills newer columns (driver contact, car PIN, rider waitlist linkage)
+- Renames/drops legacy ride request columns when required
+- Ensures Row Level Security (RLS) and policies are present
 
 ### `02-cleanup-functions.sql`
 - `cleanup_expired_events_simple()` - Main cleanup function used by the app
@@ -68,11 +73,4 @@ SELECT * FROM cron.job;
 3. **"Permission denied"** - Check RLS policies are set correctly
 
 ### Reset Database:
-If you need to start over:
-```sql
--- Drop all tables (WARNING: This deletes all data!)
-DROP TABLE IF EXISTS passengers CASCADE;
-DROP TABLE IF EXISTS cars CASCADE;
-DROP TABLE IF EXISTS events CASCADE;
-```
-Then re-run the setup files.
+If you need to start over, run `00-complete-setup.sql` (it will drop and recreate all tables). This is safer than manually dropping tables because it replays the full schema and policies in one go.

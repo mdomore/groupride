@@ -5,7 +5,15 @@ import { supabase, DatabaseService } from './supabase.js'
 class GroupRideApp {
     constructor() {
         this.currentEventId = null;
+        this.currentCars = [];
+        this.currentRideRequests = [];
+        this.currentBookingCarId = null;
+        this.currentBookingCarRequiresPin = false;
+        this.currentBookingCarValidated = false;
+        this.pendingAction = null;
+        this.pinModalState = null;
         this.initializeEventListeners();
+        this.resetRideRequestForm();
     }
 
     // Initialize all event listeners
@@ -77,6 +85,41 @@ class GroupRideApp {
             this.hideConfirmModal();
         });
 
+        document.getElementById('confirm-pin').addEventListener('click', () => {
+            this.submitPinModal();
+        });
+
+        document.getElementById('cancel-pin').addEventListener('click', () => {
+            this.cancelPinModal();
+        });
+
+        // Ride request form
+        document.getElementById('ride-request-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.createRideRequest();
+        });
+
+        document.getElementById('clear-ride-request').addEventListener('click', () => {
+            this.resetRideRequestForm();
+        });
+
+        document.getElementById('add-passenger-input').addEventListener('click', () => {
+            this.addPassengerInputField();
+        });
+
+        document.getElementById('car-requires-pin').addEventListener('change', (e) => {
+            const pinGroup = document.getElementById('car-pin-group');
+            if (e.target.checked) {
+                pinGroup.classList.remove('hidden');
+                setTimeout(() => {
+                    document.getElementById('car-pin').focus();
+                }, 50);
+            } else {
+                pinGroup.classList.add('hidden');
+                document.getElementById('car-pin').value = '';
+            }
+        });
+
         // Close modals when clicking outside
         document.getElementById('passenger-modal').addEventListener('click', (e) => {
             if (e.target.id === 'passenger-modal') {
@@ -90,10 +133,22 @@ class GroupRideApp {
             }
         });
 
+        document.getElementById('pin-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'pin-modal') {
+                this.cancelPinModal();
+            }
+        });
+
         // Enter key for passenger name input
         document.getElementById('passenger-name-input').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 this.confirmBooking();
+            }
+        });
+
+        document.getElementById('car-pin-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                this.submitPinModal();
             }
         });
     }
@@ -134,7 +189,7 @@ class GroupRideApp {
         }
 
         // Clear any previous errors
-        this.clearFieldErrors();
+        this.clearFormErrors('event-form');
 
         try {
             // Generate unique event ID
@@ -191,6 +246,8 @@ class GroupRideApp {
         const driverEmail = document.getElementById('driver-email').value.trim();
         const carModel = document.getElementById('car-model').value.trim();
         const availableSeats = parseInt(document.getElementById('available-seats').value);
+        const requiresPin = document.getElementById('car-requires-pin').checked;
+        const carPin = document.getElementById('car-pin').value.trim();
 
         // Validate inputs
         if (!driverName) {
@@ -208,18 +265,25 @@ class GroupRideApp {
             return;
         }
 
+        if (requiresPin && carPin.length < 4) {
+            this.showFieldError('car-pin', 'PIN must be at least 4 characters');
+            return;
+        }
+
         // Clear any previous errors
-        this.clearFieldErrors();
+        this.clearFormErrors('car-form');
 
         try {
             const car = {
                 event_id: this.currentEventId,
                 driver_name: driverName,
-                driver_phone: driverPhone,
-                driver_email: driverEmail,
+                driver_phone: driverPhone || null,
+                driver_email: driverEmail || null,
                 car_model: carModel,
                 available_seats: availableSeats,
-                occupied_seats: 0
+                occupied_seats: 0,
+                requires_pin: requiresPin,
+                car_pin: requiresPin ? carPin : null
             };
 
             // Add car to database
@@ -227,6 +291,7 @@ class GroupRideApp {
 
             // Clear form
             document.getElementById('car-form').reset();
+            document.getElementById('car-pin-group').classList.add('hidden');
 
             // Hide car registration and show event view
             document.getElementById('car-registration').classList.add('hidden');
@@ -235,6 +300,59 @@ class GroupRideApp {
         } catch (error) {
             console.error('Error registering car:', error);
             this.showMessage('Failed to register car. Please try again.', 'error');
+        }
+    }
+
+    // Create a ride request for the current event
+    async createRideRequest() {
+        if (!this.currentEventId) {
+            this.showMessage('Join or create an event before asking for a ride.', 'error');
+            return;
+        }
+
+        const contactName = document.getElementById('ride-request-contact-name').value.trim();
+        const contactPhone = document.getElementById('ride-request-contact-phone').value.trim();
+        const notes = document.getElementById('ride-request-notes').value.trim();
+        const passengerNames = this.getPassengerInputValues();
+
+        if (!contactName) {
+            this.showFieldError('ride-request-contact-name', 'Contact name is required.');
+            return;
+        }
+
+        if (passengerNames.length === 0) {
+            this.showMessage('Add at least one rider name before submitting.', 'error');
+            return;
+        }
+
+        if (!passengerNames.some(name => name.toLowerCase() === contactName.toLowerCase())) {
+            passengerNames.unshift(contactName);
+        }
+
+        this.clearFormErrors('ride-request-form');
+
+        try {
+            const request = await DatabaseService.createRideRequest({
+                event_id: this.currentEventId,
+                contact_name: contactName,
+                contact_phone: contactPhone || null,
+                notes: notes || null
+            });
+
+            await DatabaseService.createRideRequestPassengers(
+                passengerNames.map(name => ({
+                    request_id: request.id,
+                    name,
+                    status: 'waiting'
+                }))
+            );
+
+            this.resetRideRequestForm();
+            await this.displayRideRequests();
+            this.showMessage('Ride request posted!', 'success');
+        } catch (error) {
+            console.error('Error creating ride request:', error);
+            this.showMessage('Failed to post ride request. Please try again.', 'error');
         }
     }
 
@@ -419,6 +537,9 @@ class GroupRideApp {
             document.getElementById('event-view').classList.remove('hidden');
             document.getElementById('join-event').classList.add('hidden');
             document.getElementById('create-event').classList.add('hidden');
+            document.getElementById('ride-requests-section').classList.remove('hidden');
+
+            this.currentCars = [];
 
             // Display cars
             await this.displayCars();
@@ -433,6 +554,9 @@ class GroupRideApp {
         try {
             const cars = await DatabaseService.getCarsForEvent(this.currentEventId);
             const carsList = document.getElementById('cars-list');
+
+            this.currentCars = cars;
+            await this.displayRideRequests();
             
             if (cars.length === 0) {
                 carsList.innerHTML = `
@@ -469,6 +593,7 @@ class GroupRideApp {
                             <h4>Car #${index + 1}: ${car.car_model}</h4>
                             <div class="car-actions">
                             <span class="driver-badge">${car.driver_name}</span>
+                            <span class="car-pin-badge ${car.requires_pin ? 'protected' : 'open'}">${car.requires_pin ? 'PIN required' : 'Open seats'}</span>
                             ${(car.driver_phone || car.driver_email) ? `
                                 <div class="driver-contact">
                                     ${car.driver_phone ? `<span>${car.driver_phone}</span>` : ''}
@@ -492,6 +617,401 @@ class GroupRideApp {
         } catch (error) {
             console.error('Error loading cars:', error);
             this.showMessage('Failed to load cars. Please try again.', 'error');
+        }
+    }
+
+    // Reset ride request form inputs
+    resetRideRequestForm() {
+        const form = document.getElementById('ride-request-form');
+        if (form) {
+            form.reset();
+        }
+        this.clearFormErrors('ride-request-form');
+        const list = document.getElementById('ride-passenger-list');
+        if (list) {
+            list.innerHTML = '';
+            this.addPassengerInputField();
+        }
+    }
+
+    addPassengerInputField(value = '') {
+        const list = document.getElementById('ride-passenger-list');
+        if (!list) return;
+
+        const row = document.createElement('div');
+        row.className = 'passenger-input-row';
+
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.placeholder = 'Passenger name';
+        input.value = value;
+        input.setAttribute('data-role', 'ride-passenger-input');
+
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'remove-passenger-btn secondary-btn';
+        removeBtn.textContent = 'Remove';
+        removeBtn.addEventListener('click', () => {
+            if (list.children.length > 1) {
+                row.remove();
+            } else {
+                input.value = '';
+                input.focus();
+            }
+        });
+
+        row.appendChild(input);
+        row.appendChild(removeBtn);
+        list.appendChild(row);
+
+        input.focus();
+    }
+
+    getPassengerInputValues() {
+        const inputs = document.querySelectorAll('#ride-passenger-list [data-role="ride-passenger-input"]');
+        const names = [];
+        inputs.forEach((input) => {
+            const value = input.value.trim();
+            if (value) {
+                names.push(value);
+            }
+        });
+        return names;
+    }
+
+    // Display ride requests for the current event
+    async displayRideRequests() {
+        if (!this.currentEventId) return;
+
+        try {
+            const requests = await DatabaseService.getRideRequestsForEvent(this.currentEventId);
+            this.currentRideRequests = requests;
+
+            const list = document.getElementById('ride-requests-list');
+            if (!list) return;
+
+            const waitingCount = requests.reduce((count, request) => {
+                const riders = request.ride_request_passengers || [];
+                return count + riders.filter(r => r.status === 'waiting').length;
+            }, 0);
+
+            const countElement = document.getElementById('ride-requests-count');
+            if (countElement) {
+                countElement.textContent = waitingCount === 0
+                    ? 'No riders waiting'
+                    : `${waitingCount} rider${waitingCount === 1 ? '' : 's'} waiting`;
+            }
+
+            if (requests.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <p>No ride requests yet.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const sortedRequests = [...requests].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+            list.innerHTML = sortedRequests.map(request => this.renderRideRequestItem(request)).join('');
+        } catch (error) {
+            console.error('Error loading ride requests:', error);
+            this.showMessage('Failed to load ride requests. Please try again.', 'error');
+        }
+    }
+
+    renderRideRequestItem(request) {
+        const metaLines = [];
+        if (request.contact_phone) {
+            metaLines.push(`Phone: ${request.contact_phone}`);
+        }
+        if (request.notes) {
+            metaLines.push(`Notes: ${request.notes}`);
+        }
+
+        const metaHtml = metaLines.length > 0
+            ? `<div class="ride-request-meta">${metaLines.map(line => `<span>${line}</span>`).join('')}</div>`
+            : '';
+
+        const passengers = [...(request.ride_request_passengers || [])]
+            .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        const availableCars = this.currentCars.filter(car => car.available_seats > car.occupied_seats);
+
+        const passengersHtml = passengers.length === 0
+            ? `<div class="empty-state"><p>No riders listed yet.</p></div>`
+            : passengers.map(passenger => this.renderRideRequestPassenger(request, passenger, availableCars)).join('');
+
+        return `
+            <div class="ride-request-item">
+                <div class="ride-request-main">
+                    <h4>${request.contact_name}</h4>
+                    ${metaHtml}
+                </div>
+                <div class="ride-request-passengers-list">
+                    ${passengersHtml}
+                </div>
+                <div class="ride-request-actions">
+                    <button class="secondary-btn" onclick="window.app.removeRideRequest(${request.id})">Remove Request</button>
+                </div>
+            </div>
+        `;
+    }
+
+    renderRideRequestPassenger(request, passenger, availableCars) {
+        const statusClass = passenger.status === 'waiting' ? 'waiting' : 'assigned';
+        let controlsHtml = '';
+
+        if (passenger.status === 'waiting') {
+            if (availableCars.length > 0) {
+                const options = availableCars.map(car => {
+                    const seatsLeft = car.available_seats - car.occupied_seats;
+                    const pinLabel = car.requires_pin ? ' (PIN)' : '';
+                    return `<option value="${car.id}">${car.car_model} (${car.driver_name}) • ${seatsLeft} seat${seatsLeft === 1 ? '' : 's'}${pinLabel}</option>`;
+                }).join('');
+
+                controlsHtml = `
+                    <div class="assign-controls">
+                        <select id="assign-select-${passenger.id}" class="assign-select">
+                            <option value="">Select a car</option>
+                            ${options}
+                        </select>
+                        <button type="button" class="secondary-btn" onclick="window.app.assignPassengerToSelectedCar(${passenger.id})">Assign</button>
+                        <button type="button" class="remove-passenger-btn" onclick="window.app.removeRidePassenger(${passenger.id})">Remove</button>
+                    </div>
+                `;
+            } else {
+                controlsHtml = `
+                    <div class="assign-controls no-cars">
+                        <div class="ride-request-meta">No cars with free seats yet.</div>
+                        <button type="button" class="remove-passenger-btn" onclick="window.app.removeRidePassenger(${passenger.id})">Remove</button>
+                    </div>
+                `;
+            }
+        } else {
+            const assignedCar = this.currentCars.find(car => car.id === passenger.assigned_car_id);
+            controlsHtml = `
+                <div class="ride-request-meta">
+                    <span>Assigned to ${assignedCar ? `${assignedCar.car_model} (${assignedCar.driver_name})` : 'a car'}.</span>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="ride-request-passenger ${statusClass}">
+                <header>
+                    <h4>${passenger.name}</h4>
+                    <span class="status-tag ${statusClass}">${passenger.status === 'waiting' ? 'Waiting' : 'Assigned'}</span>
+                </header>
+                ${controlsHtml}
+            </div>
+        `;
+    }
+
+    // Remove a ride request after confirmation
+    removeRideRequest(requestId) {
+        const request = this.currentRideRequests.find(r => r.id === requestId);
+        if (!request) return;
+
+        this.pendingAction = {
+            type: 'removeRideRequest',
+            requestId,
+            riderName: request.contact_name
+        };
+
+        document.getElementById('confirm-title').textContent = 'Remove Ride Request';
+        document.getElementById('confirm-message').textContent = `Remove the ride request from ${request.contact_name}?`;
+        document.getElementById('confirm-modal').classList.remove('hidden');
+    }
+
+    removeRidePassenger(passengerId) {
+        const found = this.findRideRequestPassenger(passengerId);
+        if (!found) return;
+
+        const { passenger, request } = found;
+
+        this.pendingAction = {
+            type: 'removeRidePassenger',
+            passengerId,
+            passengerName: passenger.name,
+            requestId: request.id,
+            riderName: request.contact_name
+        };
+
+        document.getElementById('confirm-title').textContent = 'Remove Rider';
+        document.getElementById('confirm-message').textContent = `Remove ${passenger.name} from ${request.contact_name}'s waitlist?`;
+        document.getElementById('confirm-modal').classList.remove('hidden');
+    }
+
+    async assignPassengerToSelectedCar(passengerId) {
+        const select = document.getElementById(`assign-select-${passengerId}`);
+        if (!select) {
+            this.showMessage('Select a car before assigning.', 'error');
+            return;
+        }
+
+        const carId = parseInt(select.value, 10);
+        if (!carId) {
+            this.showMessage('Choose a car before assigning.', 'error');
+            return;
+        }
+
+        await this.assignPassengerToCar(passengerId, carId);
+    }
+
+    async assignPassengerToCar(passengerId, carId) {
+        try {
+            const found = this.findRideRequestPassenger(passengerId);
+            if (!found) {
+                this.showMessage('Rider not found.', 'error');
+                return;
+            }
+
+            const { passenger } = found;
+
+            const cars = await DatabaseService.getCarsForEvent(this.currentEventId);
+            this.currentCars = cars;
+            const car = cars.find(c => c.id === carId);
+
+            if (!car) {
+                this.showMessage('Car not found.', 'error');
+                return;
+            }
+
+            if (car.available_seats <= car.occupied_seats) {
+                this.showMessage('No seats available in that car.', 'error');
+                return;
+            }
+
+            const pinOk = await this.ensureCarPin(car, 'Enter the PIN before assigning riders to this car.');
+            if (!pinOk) {
+                return;
+            }
+
+            const seatIndex = this.getNextAvailableSeatIndex(car);
+            if (seatIndex === null) {
+                this.showMessage('No seats available in that car.', 'error');
+                return;
+            }
+
+            await DatabaseService.addPassenger({
+                car_id: carId,
+                name: passenger.name,
+                seat_index: seatIndex,
+                request_passenger_id: passenger.id
+            });
+
+            await DatabaseService.updateCar(carId, {
+                occupied_seats: car.occupied_seats + 1
+            });
+
+            await DatabaseService.markRidePassengerAssigned(passenger.id, carId);
+
+            await this.displayCars();
+            this.showMessage(`${passenger.name} assigned to ${car.car_model}.`, 'success');
+        } catch (error) {
+            console.error('Error assigning passenger:', error);
+            this.showMessage('Failed to assign rider. Please try again.', 'error');
+        }
+    }
+
+    findRideRequestPassenger(passengerId) {
+        for (const request of this.currentRideRequests || []) {
+            const passengers = request.ride_request_passengers || [];
+            const passenger = passengers.find(p => p.id === passengerId);
+            if (passenger) {
+                return { request, passenger };
+            }
+        }
+        return null;
+    }
+
+    getNextAvailableSeatIndex(car) {
+        const taken = (car.passengers || []).map(p => p.seat_index);
+        for (let i = 0; i < car.available_seats; i++) {
+            if (!taken.includes(i)) {
+                return i;
+            }
+        }
+        return null;
+    }
+
+    async ensureCarPin(car, message = 'This car is protected. Enter the PIN shared by the driver.') {
+        if (!car.requires_pin) {
+            return true;
+        }
+        return await this.promptForCarPin(car, message);
+    }
+
+    promptForCarPin(car, message) {
+        if (this.pinModalState) {
+            // Resolve any existing pending promise as cancelled
+            const { resolve } = this.pinModalState;
+            this.pinModalState = null;
+            if (resolve) {
+                resolve(false);
+            }
+        }
+
+        return new Promise((resolve) => {
+            this.pinModalState = { carId: car.id, resolve };
+            document.getElementById('pin-modal-title').textContent = `Enter PIN for ${car.car_model}`;
+            document.getElementById('pin-modal-message').textContent = message;
+            const input = document.getElementById('car-pin-input');
+            input.value = '';
+            document.getElementById('pin-modal').classList.remove('hidden');
+            setTimeout(() => {
+                input.focus();
+            }, 50);
+        });
+    }
+
+    async submitPinModal() {
+        if (!this.pinModalState) return;
+
+        const input = document.getElementById('car-pin-input');
+        const pin = input.value.trim();
+        if (!pin) {
+            this.showMessage('Please enter the PIN.', 'error');
+            input.focus();
+            return;
+        }
+
+        try {
+            const { carId, resolve } = this.pinModalState;
+            const isValid = await DatabaseService.verifyCarPin(carId, pin);
+            if (!isValid) {
+                this.showMessage('Incorrect PIN. Please try again.', 'error');
+                input.select();
+                return;
+            }
+
+            this.hidePinModal();
+            this.pinModalState = null;
+            resolve(true);
+        } catch (error) {
+            console.error('Error verifying PIN:', error);
+            this.showMessage('Could not verify PIN. Please try again.', 'error');
+        }
+    }
+
+    cancelPinModal() {
+        if (this.pinModalState) {
+            const { resolve } = this.pinModalState;
+            this.pinModalState = null;
+            if (resolve) {
+                resolve(false);
+            }
+        }
+        this.hidePinModal();
+    }
+
+    hidePinModal() {
+        const modal = document.getElementById('pin-modal');
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+        const input = document.getElementById('car-pin-input');
+        if (input) {
+            input.value = '';
         }
     }
 
@@ -522,11 +1042,46 @@ class GroupRideApp {
     }
 
     // Book a seat in a specific car
-    bookSeat(carId) {
-        this.currentBookingCarId = carId;
-        document.getElementById('passenger-name-input').value = '';
-        document.getElementById('passenger-modal').classList.remove('hidden');
-        document.getElementById('passenger-name-input').focus();
+    async bookSeat(carId) {
+        try {
+            let car = this.currentCars.find(c => c.id === carId);
+            if (!car) {
+                const cars = await DatabaseService.getCarsForEvent(this.currentEventId);
+                this.currentCars = cars;
+                car = cars.find(c => c.id === carId);
+            }
+
+            if (!car) {
+                this.showMessage('Car not found.', 'error');
+                return;
+            }
+
+            if (car.available_seats <= car.occupied_seats) {
+                this.showMessage('No seats available in this car.', 'error');
+                return;
+            }
+
+            this.currentBookingCarRequiresPin = car.requires_pin;
+            this.currentBookingCarValidated = false;
+
+            if (car.requires_pin) {
+                const pinOk = await this.ensureCarPin(car, 'Enter the PIN to book a seat in this car.');
+                if (!pinOk) {
+                    return;
+                }
+            }
+
+            this.currentBookingCarValidated = true;
+            this.currentBookingCarId = carId;
+            document.getElementById('passenger-name-input').value = '';
+            document.getElementById('passenger-modal').classList.remove('hidden');
+            setTimeout(() => {
+                document.getElementById('passenger-name-input').focus();
+            }, 50);
+        } catch (error) {
+            console.error('Error preparing seat booking:', error);
+            this.showMessage('Could not start booking. Please try again.', 'error');
+        }
     }
 
     // Confirm booking from modal
@@ -539,14 +1094,29 @@ class GroupRideApp {
 
         try {
             const cars = await DatabaseService.getCarsForEvent(this.currentEventId);
+            this.currentCars = cars;
             const car = cars.find(c => c.id === this.currentBookingCarId);
 
             if (car && car.available_seats > car.occupied_seats) {
+                if (car.requires_pin && !this.currentBookingCarValidated) {
+                    this.showMessage('This car requires a PIN. Please try booking again.', 'error');
+                    this.hidePassengerModal();
+                    return;
+                }
+
+                const seatIndex = this.getNextAvailableSeatIndex(car);
+                if (seatIndex === null) {
+                    this.showMessage('No seats available in this car.', 'error');
+                    this.hidePassengerModal();
+                    return;
+                }
+
                 // Add passenger to database
                 await DatabaseService.addPassenger({
                     car_id: this.currentBookingCarId,
                     name: passengerName,
-                    seat_index: car.occupied_seats
+                    seat_index: seatIndex,
+                    request_passenger_id: null
                 });
 
                 // Update car occupied seats
@@ -582,7 +1152,8 @@ class GroupRideApp {
                     carId: carId,
                     seatIndex: seatIndex,
                     passengerId: passenger.id,
-                    passengerName: passenger.name
+                    passengerName: passenger.name,
+                    requestPassengerId: passenger.request_passenger_id || null
                 };
                 
                 // Show confirmation modal
@@ -662,6 +1233,20 @@ class GroupRideApp {
         });
     }
 
+    // Clear errors for a specific form
+    clearFormErrors(formId) {
+        const form = document.getElementById(formId);
+        if (!form) return;
+
+        const errors = form.querySelectorAll('.field-error');
+        errors.forEach(error => error.remove());
+
+        const fields = form.querySelectorAll('input, textarea, select');
+        fields.forEach(field => {
+            field.style.borderColor = '#e2e8f0';
+        });
+    }
+
     // Reset to create event view
     resetToCreateEvent() {
         this.currentEventId = null;
@@ -673,6 +1258,7 @@ class GroupRideApp {
         document.getElementById('car-registration').classList.add('hidden');
         document.getElementById('event-view').classList.add('hidden');
         document.getElementById('edit-event').classList.add('hidden');
+        document.getElementById('ride-requests-section').classList.add('hidden');
         
         // Show create event and join event sections
         document.getElementById('create-event').classList.remove('hidden');
@@ -687,11 +1273,38 @@ class GroupRideApp {
         document.getElementById('event-form').reset();
         document.getElementById('car-form').reset();
         document.getElementById('join-form').reset();
+        document.getElementById('car-requires-pin').checked = false;
+        document.getElementById('car-pin-group').classList.add('hidden');
+        document.getElementById('car-pin').value = '';
+        this.resetRideRequestForm();
+        const rideRequestsList = document.getElementById('ride-requests-list');
+        if (rideRequestsList) {
+            rideRequestsList.innerHTML = '';
+        }
+        const rideRequestsCount = document.getElementById('ride-requests-count');
+        if (rideRequestsCount) {
+            rideRequestsCount.textContent = '';
+        }
         
         // Set today's date
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('event-date').value = today;
         
+        this.currentCars = [];
+        this.currentRideRequests = [];
+        this.currentBookingCarId = null;
+        this.currentBookingCarRequiresPin = false;
+        this.currentBookingCarValidated = false;
+        this.pendingAction = null;
+        if (this.pinModalState) {
+            const { resolve } = this.pinModalState;
+            this.pinModalState = null;
+            if (resolve) {
+                resolve(false);
+            }
+        }
+        this.hidePinModal();
+
         this.clearFieldErrors();
     }
 
@@ -752,9 +1365,6 @@ class GroupRideApp {
 
     // Show add car form
     showAddCarForm() {
-        console.log('showAddCarForm called'); // Debug log
-        console.log('currentEventId:', this.currentEventId); // Debug log
-        
         // Update the section title to indicate we're adding another car
         const carSection = document.getElementById('car-registration');
         const title = carSection.querySelector('h2');
@@ -775,6 +1385,9 @@ class GroupRideApp {
         // Clear the form
         document.getElementById('car-form').reset();
         this.clearFieldErrors();
+        document.getElementById('car-requires-pin').checked = false;
+        document.getElementById('car-pin-group').classList.add('hidden');
+        document.getElementById('car-pin').value = '';
         
         // Hide car registration and show event view
         document.getElementById('car-registration').classList.add('hidden');
@@ -842,6 +1455,8 @@ class GroupRideApp {
     hidePassengerModal() {
         document.getElementById('passenger-modal').classList.add('hidden');
         this.currentBookingCarId = null;
+        this.currentBookingCarRequiresPin = false;
+        this.currentBookingCarValidated = false;
     }
 
     hideConfirmModal() {
@@ -852,7 +1467,7 @@ class GroupRideApp {
     async confirmAction() {
         if (!this.pendingAction) return;
 
-        const { type, carId, seatIndex, passengerId, passengerName, carInfo, hasPassengers } = this.pendingAction;
+        const { type, carId, seatIndex, passengerId, passengerName, carInfo, hasPassengers, requestId, riderName, requestPassengerId } = this.pendingAction;
 
         try {
             if (type === 'freeSeat') {
@@ -866,10 +1481,15 @@ class GroupRideApp {
                     occupied_seats: car.occupied_seats - 1
                 });
 
+                if (requestPassengerId) {
+                    await DatabaseService.markRidePassengerWaiting(requestPassengerId);
+                }
+
                 // Refresh display
                 await this.displayCars();
                 this.showMessage(`Seat freed for ${passengerName}`, 'success');
             } else if (type === 'removeCar') {
+                await DatabaseService.resetRidePassengersForCar(carId);
                 // Remove car (passengers will be deleted automatically due to CASCADE)
                 await DatabaseService.deleteCar(carId);
                 
@@ -881,6 +1501,14 @@ class GroupRideApp {
                 } else {
                     this.showMessage(`${carInfo} removed`, 'success');
                 }
+            } else if (type === 'removeRideRequest') {
+                await DatabaseService.deleteRideRequest(requestId);
+                await this.displayRideRequests();
+                this.showMessage(`Ride request for ${riderName} removed`, 'success');
+            } else if (type === 'removeRidePassenger') {
+                await DatabaseService.deleteRidePassenger(passengerId);
+                await this.displayRideRequests();
+                this.showMessage(`${passengerName} removed from the waitlist`, 'success');
             }
 
             this.hideConfirmModal();

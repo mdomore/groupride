@@ -99,6 +99,26 @@ header p {
     overflow: hidden; /* Prevents overflow on mobile */
 }
 
+.form-inline {
+    display: flex;
+    align-items: center;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 500;
+    color: #0f172a;
+}
+
+.form-hint {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.8rem;
+    color: #64748b;
+}
+
 label {
     display: block;
     margin-bottom: 5px;
@@ -337,6 +357,41 @@ button:active {
     background: #1e293b;
 }
 
+.ride-passenger-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.passenger-input-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.passenger-input-row input {
+    flex: 1;
+}
+
+.remove-passenger-btn {
+    background: #f8fafc;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+}
+
+.remove-passenger-btn:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+.add-passenger-btn {
+    margin-top: 12px;
+    width: 100%;
+    font-size: 0.9rem;
+}
+
 /* Cars list */
 .car-item {
     background: #f8fafc;
@@ -482,6 +537,30 @@ button:active {
     border: none;
 }
 
+.car-pin-badge {
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    color: #0f172a;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.car-pin-badge.protected {
+    background: #fee2e2;
+    color: #b91c1c;
+    border-color: #fecaca;
+}
+
+.car-pin-badge.open {
+    background: #dcfce7;
+    color: #15803d;
+    border-color: #bbf7d0;
+}
+
 .remove-car-btn {
     background: #0f172a;
     color: white;
@@ -513,6 +592,213 @@ button:active {
 .seat-count {
     font-weight: 500;
     color: #64748b;
+}
+
+/* Ride requests */
+.ride-requests-block {
+    display: grid;
+    gap: 20px;
+    margin-top: 25px;
+}
+
+.ride-request-card,
+.ride-requests-card {
+    background: #f8fafc;
+    border-radius: 10px;
+    padding: 20px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+}
+
+.ride-request-card h3,
+.ride-requests-card h3 {
+    margin-bottom: 12px;
+    color: #0f172a;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.ride-request-helper {
+    color: #64748b;
+    font-size: 0.9rem;
+    margin-bottom: 16px;
+}
+
+.ride-requests-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.ride-requests-count {
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
+.ride-requests-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.ride-request-item {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+}
+
+.ride-request-main h4 {
+    margin: 0 0 6px 0;
+    font-size: 1.05rem;
+    color: #0f172a;
+}
+
+.ride-request-main {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.ride-request-passengers-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.ride-request-party,
+.ride-request-car,
+.ride-request-notes {
+    color: #64748b;
+    font-size: 0.9rem;
+    margin-bottom: 4px;
+}
+
+.ride-request-notes {
+    font-style: italic;
+}
+
+.ride-request-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.ride-request-actions button {
+    font-size: 0.85rem;
+    padding: 8px 12px;
+}
+
+.ride-request-passenger {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    background: #f8fafc;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+}
+
+.ride-request-passenger.waiting {
+    border-left: 4px solid #0f172a;
+}
+
+.ride-request-passenger.assigned {
+    opacity: 0.6;
+}
+
+.ride-request-passenger header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+}
+
+.ride-request-passenger header h4 {
+    color: #0f172a;
+    font-weight: 600;
+}
+
+.ride-request-passenger header h4 {
+    margin: 0;
+}
+
+.ride-request-meta {
+    font-size: 0.85rem;
+    color: #64748b;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.assign-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.assign-controls.no-cars {
+    gap: 12px;
+}
+
+.assign-select {
+    flex: 1;
+    min-width: 160px;
+    padding: 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    background: white;
+    color: #0f172a;
+}
+
+.assign-controls button {
+    font-size: 0.8rem;
+    padding: 6px 10px;
+}
+
+.status-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-tag.waiting {
+    background: #fef3c7;
+    color: #b45309;
+}
+
+.status-tag.assigned {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 24px 16px;
+    background: white;
+    border: 1px dashed #cbd5e0;
+    border-radius: 8px;
+    color: #64748b;
+    font-size: 0.95rem;
+}
+
+@media (min-width: 700px) {
+    .ride-requests-block {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 /* Seat booking */
@@ -805,6 +1091,24 @@ input[type="time"] {
     /* Card responsive adjustments */
     .card {
         overflow: hidden; /* Prevents content from overflowing card */
+    }
+
+    .ride-requests-block {
+        grid-template-columns: 1fr;
+    }
+
+    .ride-request-item {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .ride-request-actions {
+        justify-content: flex-end;
+    }
+
+    .passenger-input-row {
+        flex-direction: column;
+        align-items: stretch;
     }
     
     /* Event navigation responsive */

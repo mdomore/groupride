@@ -9,48 +9,10 @@
 
 ## 2. Database Schema
 
-Run this SQL in your Supabase SQL editor:
+Pick the path that matches your situation:
 
-```sql
--- Create events table
-CREATE TABLE events (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    date DATE NOT NULL,
-    time TIME NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Create cars table
-CREATE TABLE cars (
-    id SERIAL PRIMARY KEY,
-    event_id TEXT REFERENCES events(id) ON DELETE CASCADE,
-    driver_name TEXT NOT NULL,
-    car_model TEXT NOT NULL,
-    available_seats INTEGER NOT NULL,
-    occupied_seats INTEGER DEFAULT 0,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Create passengers table
-CREATE TABLE passengers (
-    id SERIAL PRIMARY KEY,
-    car_id INTEGER REFERENCES cars(id) ON DELETE CASCADE,
-    name TEXT NOT NULL,
-    seat_index INTEGER NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Enable Row Level Security
-ALTER TABLE events ENABLE ROW LEVEL SECURITY;
-ALTER TABLE cars ENABLE ROW LEVEL SECURITY;
-ALTER TABLE passengers ENABLE ROW LEVEL SECURITY;
-
--- Create policies (allow all operations for now - you can restrict later)
-CREATE POLICY "Allow all operations on events" ON events FOR ALL USING (true);
-CREATE POLICY "Allow all operations on cars" ON cars FOR ALL USING (true);
-CREATE POLICY "Allow all operations on passengers" ON passengers FOR ALL USING (true);
-```
+- **Brand-new project / full reset**: run `SQL/00-complete-setup.sql`. It drops any existing GroupRide tables, recreates the latest schema (including ride waitlists and car PIN support), and installs the cleanup helpers in one go.
+- **Existing project**: run `SQL/01-create-tables.sql` followed by `SQL/02-cleanup-functions.sql`. The table script is idempotent—it creates missing tables/columns and updates policies without touching existing data. Add `SQL/03-scheduled-cleanup.sql` only if you want the optional cron job.
 
 ## 3. Environment Variables
 

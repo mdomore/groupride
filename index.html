@@ -50,11 +50,11 @@
                     </div>
                     <div class="form-group">
                         <label for="driver-phone">Driver Phone:</label>
-                        <input type="tel" id="driver-phone" required placeholder="Your phone number">
+                        <input type="tel" id="driver-phone" placeholder="Your phone number">
                     </div>
                     <div class="form-group">
                         <label for="driver-email">Driver Email:</label>
-                        <input type="email" id="driver-email" required placeholder="Your email address">
+                        <input type="email" id="driver-email" placeholder="Your email address">
                     </div>
                     <div class="form-group">
                         <label for="car-model">Car Model:</label>
@@ -63,6 +63,17 @@
                     <div class="form-group">
                         <label for="available-seats">Available Seats:</label>
                         <input type="number" id="available-seats" min="1" max="8" required>
+                    </div>
+                    <div class="form-group form-inline">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="car-requires-pin">
+                            Require PIN to assign riders to this car
+                        </label>
+                    </div>
+                    <div class="form-group hidden" id="car-pin-group">
+                        <label for="car-pin">Set a PIN (share with trusted drivers):</label>
+                        <input type="text" id="car-pin" minlength="4" maxlength="12" placeholder="Enter 4-12 characters">
+                        <small class="form-hint">Leave unchecked to keep seats open for anyone.</small>
                     </div>
                     <div class="form-actions">
                         <button type="submit">Register Car</button>
@@ -135,7 +146,46 @@
                     </div>
                 </div>
                 <div id="cars-list"></div>
-                <div id="seat-booking"></div>
+                <div id="ride-requests-section" class="ride-requests-block hidden">
+                    <div class="ride-request-card">
+                        <h3>Need a Ride?</h3>
+                        <p class="ride-request-helper">Share your contact info, then list everyone who needs a ride. Add as many names as you need.</p>
+                        <form id="ride-request-form">
+                            <div class="form-group">
+                                <label for="ride-request-contact-name">Contact Name</label>
+                                <input type="text" id="ride-request-contact-name" required placeholder="e.g., Sam Carter">
+                            </div>
+                            <div class="form-group">
+                                <label for="ride-request-contact-phone">Contact Phone (optional)</label>
+                                <input type="tel" id="ride-request-contact-phone" placeholder="e.g., +1 555 123 4567">
+                            </div>
+                            <div class="form-group">
+                                <label for="ride-request-notes">Notes for drivers (optional)</label>
+                                <textarea id="ride-request-notes" rows="2" placeholder="e.g., Child seat needed."></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label>Passenger Names</label>
+                                <div id="ride-passenger-list" class="ride-passenger-list"></div>
+                                <button type="button" id="add-passenger-input" class="secondary-btn add-passenger-btn">+ Add another rider</button>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit">Request Ride</button>
+                                <button type="button" id="clear-ride-request" class="secondary-btn">Clear</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="ride-requests-card">
+                        <div class="ride-requests-header">
+                            <h3>Ride Requests</h3>
+                            <p class="ride-requests-count" id="ride-requests-count"></p>
+                        </div>
+                        <div id="ride-requests-list" class="ride-requests-list">
+                            <div class="empty-state">
+                                <p>No ride requests yet.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <!-- Custom Modal for Passenger Name Input -->
@@ -159,6 +209,19 @@
                     <div class="modal-actions">
                         <button id="confirm-yes" class="btn-danger">Yes, Continue</button>
                         <button id="confirm-no" class="secondary-btn">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Custom Modal for Car PIN Entry -->
+            <div id="pin-modal" class="modal hidden">
+                <div class="modal-content">
+                    <h3 id="pin-modal-title">Enter Car PIN</h3>
+                    <p id="pin-modal-message">This car is protected. Enter the PIN shared by the driver.</p>
+                    <input type="password" id="car-pin-input" placeholder="PIN" minlength="4" maxlength="12">
+                    <div class="modal-actions">
+                        <button id="confirm-pin" class="btn-primary">Submit</button>
+                        <button id="cancel-pin" class="secondary-btn">Cancel</button>
                     </div>
                 </div>
             </div>

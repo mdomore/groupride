@@ -56,7 +56,15 @@ export class DatabaseService {
         const { data, error } = await supabase
             .from('cars')
             .select(`
-                *,
+                id,
+                event_id,
+                driver_name,
+                driver_phone,
+                driver_email,
+                car_model,
+                available_seats,
+                occupied_seats,
+                requires_pin,
                 passengers (*)
             `)
             .eq('event_id', eventId)
@@ -135,5 +143,111 @@ export class DatabaseService {
         
         if (error) throw error
         return data
+    }
+
+    // Ride request operations
+    static async createRideRequest(request) {
+        const { data, error } = await supabase
+            .from('ride_requests')
+            .insert([request])
+            .select()
+
+        if (error) throw error
+        return data[0]
+    }
+
+    static async createRideRequestPassengers(passengers) {
+        if (!passengers || passengers.length === 0) return []
+
+        const { data, error } = await supabase
+            .from('ride_request_passengers')
+            .insert(passengers)
+            .select()
+
+        if (error) throw error
+        return data
+    }
+
+    static async getRideRequestsForEvent(eventId) {
+        const { data, error } = await supabase
+            .from('ride_requests')
+            .select(`
+                *,
+                ride_request_passengers (* )
+            `)
+            .eq('event_id', eventId)
+            .order('created_at', { ascending: true })
+            .order('created_at', { ascending: true, foreignTable: 'ride_request_passengers' })
+
+        if (error) throw error
+        return data
+    }
+
+    static async deleteRideRequest(requestId) {
+        const { error } = await supabase
+            .from('ride_requests')
+            .delete()
+            .eq('id', requestId)
+
+        if (error) throw error
+    }
+
+    static async deleteRidePassenger(passengerId) {
+        const { error } = await supabase
+            .from('ride_request_passengers')
+            .delete()
+            .eq('id', passengerId)
+
+        if (error) throw error
+    }
+
+    static async markRidePassengerAssigned(passengerId, carId) {
+        const { data, error } = await supabase
+            .from('ride_request_passengers')
+            .update({ status: 'assigned', assigned_car_id: carId })
+            .eq('id', passengerId)
+            .select()
+            .single()
+
+        if (error) throw error
+        return data
+    }
+
+    static async markRidePassengerWaiting(passengerId) {
+        const { data, error } = await supabase
+            .from('ride_request_passengers')
+            .update({ status: 'waiting', assigned_car_id: null })
+            .eq('id', passengerId)
+            .select()
+            .single()
+
+        if (error) throw error
+        return data
+    }
+
+    static async resetRidePassengersForCar(carId) {
+        const { error } = await supabase
+            .from('ride_request_passengers')
+            .update({ status: 'waiting', assigned_car_id: null })
+            .eq('assigned_car_id', carId)
+
+        if (error) throw error
+    }
+
+    static async verifyCarPin(carId, pin) {
+        if (!pin) return false
+
+        const { data, error } = await supabase
+            .from('cars')
+            .select('id')
+            .eq('id', carId)
+            .eq('car_pin', pin)
+            .single()
+
+        if (error || !data) {
+            return false
+        }
+
+        return true
     }
 }

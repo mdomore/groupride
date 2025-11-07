@@ -1,8 +1,8 @@
 -- GroupRide App Database Setup
 -- Run this SQL in your Supabase SQL Editor to create the required tables
 
--- Create events table
-CREATE TABLE events (
+-- Create events table (safe)
+CREATE TABLE IF NOT EXISTS events (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     date DATE NOT NULL,
@@ -10,32 +10,136 @@ CREATE TABLE events (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create cars table
-CREATE TABLE cars (
+-- Create cars table (safe)
+CREATE TABLE IF NOT EXISTS cars (
     id SERIAL PRIMARY KEY,
     event_id TEXT REFERENCES events(id) ON DELETE CASCADE,
     driver_name TEXT NOT NULL,
+    driver_phone TEXT,
+    driver_email TEXT,
     car_model TEXT NOT NULL,
     available_seats INTEGER NOT NULL,
     occupied_seats INTEGER DEFAULT 0,
+    requires_pin BOOLEAN DEFAULT false,
+    car_pin TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Create passengers table
-CREATE TABLE passengers (
+-- Ensure optional car columns exist (handles older schemas)
+ALTER TABLE cars ADD COLUMN IF NOT EXISTS driver_phone TEXT;
+ALTER TABLE cars ADD COLUMN IF NOT EXISTS driver_email TEXT;
+ALTER TABLE cars ADD COLUMN IF NOT EXISTS requires_pin BOOLEAN DEFAULT false;
+ALTER TABLE cars ADD COLUMN IF NOT EXISTS car_pin TEXT;
+ALTER TABLE cars ALTER COLUMN requires_pin SET DEFAULT false;
+UPDATE cars SET requires_pin = false WHERE requires_pin IS NULL;
+
+-- Create ride requests table (safe)
+CREATE TABLE IF NOT EXISTS ride_requests (
+    id SERIAL PRIMARY KEY,
+    event_id TEXT REFERENCES events(id) ON DELETE CASCADE,
+    contact_name TEXT,
+    contact_phone TEXT,
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Migrate older ride_requests columns if needed
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'ride_requests' AND column_name = 'rider_name'
+    ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'ride_requests' AND column_name = 'contact_name'
+    ) THEN
+        ALTER TABLE ride_requests RENAME COLUMN rider_name TO contact_name;
+    END IF;
+EXCEPTION
+    WHEN duplicate_column THEN NULL;
+END $$;
+
+ALTER TABLE ride_requests ADD COLUMN IF NOT EXISTS contact_name TEXT;
+ALTER TABLE ride_requests ADD COLUMN IF NOT EXISTS contact_phone TEXT;
+ALTER TABLE ride_requests ADD COLUMN IF NOT EXISTS notes TEXT;
+
+-- Remove deprecated columns if they still exist
+ALTER TABLE ride_requests DROP COLUMN IF EXISTS preferred_car_id;
+ALTER TABLE ride_requests DROP COLUMN IF EXISTS party_size;
+
+DO $$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'ride_requests' AND column_name = 'contact_name'
+    ) THEN
+        IF NOT EXISTS (SELECT 1 FROM ride_requests WHERE contact_name IS NULL) THEN
+            EXECUTE 'ALTER TABLE ride_requests ALTER COLUMN contact_name SET NOT NULL';
+        END IF;
+    END IF;
+END $$;
+
+-- Create ride request passengers table (safe)
+CREATE TABLE IF NOT EXISTS ride_request_passengers (
+    id SERIAL PRIMARY KEY,
+    request_id INTEGER REFERENCES ride_requests(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'waiting',
+    assigned_car_id INTEGER REFERENCES cars(id) ON DELETE SET NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create passengers table (safe)
+CREATE TABLE IF NOT EXISTS passengers (
     id SERIAL PRIMARY KEY,
     car_id INTEGER REFERENCES cars(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     seat_index INTEGER NOT NULL,
+    request_passenger_id INTEGER REFERENCES ride_request_passengers(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Enable Row Level Security
+ALTER TABLE passengers ADD COLUMN IF NOT EXISTS request_passenger_id INTEGER;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE constraint_name = 'passengers_request_passenger_id_fkey'
+    ) THEN
+        ALTER TABLE passengers
+        ADD CONSTRAINT passengers_request_passenger_id_fkey
+        FOREIGN KEY (request_passenger_id) REFERENCES ride_request_passengers(id) ON DELETE SET NULL;
+    END IF;
+END $$;
+
+-- Enable Row Level Security (idempotent)
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cars ENABLE ROW LEVEL SECURITY;
 ALTER TABLE passengers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ride_requests ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ride_request_passengers ENABLE ROW LEVEL SECURITY;
 
--- Create policies (allow all operations for now - you can restrict later)
-CREATE POLICY "Allow all operations on events" ON events FOR ALL USING (true);
-CREATE POLICY "Allow all operations on cars" ON cars FOR ALL USING (true);
-CREATE POLICY "Allow all operations on passengers" ON passengers FOR ALL USING (true);
+-- Helper to create policies only if they are missing
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'events' AND policyname = 'Allow all operations on events') THEN
+        EXECUTE 'CREATE POLICY "Allow all operations on events" ON events FOR ALL USING (true)';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'cars' AND policyname = 'Allow all operations on cars') THEN
+        EXECUTE 'CREATE POLICY "Allow all operations on cars" ON cars FOR ALL USING (true)';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'passengers' AND policyname = 'Allow all operations on passengers') THEN
+        EXECUTE 'CREATE POLICY "Allow all operations on passengers" ON passengers FOR ALL USING (true)';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'ride_requests' AND policyname = 'Allow all operations on ride_requests') THEN
+        EXECUTE 'CREATE POLICY "Allow all operations on ride_requests" ON ride_requests FOR ALL USING (true)';
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'ride_request_passengers' AND policyname = 'Allow all operations on ride_request_passengers') THEN
+        EXECUTE 'CREATE POLICY "Allow all operations on ride_request_passengers" ON ride_request_passengers FOR ALL USING (true)';
+    END IF;
+END $$;
