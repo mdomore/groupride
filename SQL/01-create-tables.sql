@@ -30,6 +30,8 @@ ALTER TABLE cars ADD COLUMN IF NOT EXISTS driver_phone TEXT;
 ALTER TABLE cars ADD COLUMN IF NOT EXISTS driver_email TEXT;
 ALTER TABLE cars ADD COLUMN IF NOT EXISTS requires_pin BOOLEAN DEFAULT false;
 ALTER TABLE cars ADD COLUMN IF NOT EXISTS car_pin TEXT;
+ALTER TABLE cars ADD COLUMN IF NOT EXISTS pickup_address TEXT;
+ALTER TABLE cars ADD COLUMN IF NOT EXISTS dropoff_address TEXT;
 ALTER TABLE cars ALTER COLUMN requires_pin SET DEFAULT false;
 UPDATE cars SET requires_pin = false WHERE requires_pin IS NULL;
 
@@ -62,6 +64,8 @@ END $$;
 ALTER TABLE ride_requests ADD COLUMN IF NOT EXISTS contact_name TEXT;
 ALTER TABLE ride_requests ADD COLUMN IF NOT EXISTS contact_phone TEXT;
 ALTER TABLE ride_requests ADD COLUMN IF NOT EXISTS notes TEXT;
+ALTER TABLE ride_requests ADD COLUMN IF NOT EXISTS pickup_address TEXT;
+ALTER TABLE ride_requests ADD COLUMN IF NOT EXISTS dropoff_address TEXT;
 
 -- Remove deprecated columns if they still exist
 ALTER TABLE ride_requests DROP COLUMN IF EXISTS preferred_car_id;

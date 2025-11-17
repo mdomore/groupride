@@ -65,6 +65,8 @@ export class DatabaseService {
                 available_seats,
                 occupied_seats,
                 requires_pin,
+                pickup_address,
+                dropoff_address,
                 passengers (*)
             `)
             .eq('event_id', eventId)

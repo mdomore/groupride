@@ -582,6 +582,30 @@ button:active {
     transform: scale(0.95);
 }
 
+.car-addresses {
+    padding: 12px 20px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 0.9rem;
+}
+
+.car-address {
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.car-address strong {
+    color: #0f172a;
+    font-weight: 600;
+    min-width: 70px;
+}
+
 .seat-info {
     display: flex;
     justify-content: space-between;
@@ -735,6 +759,26 @@ button:active {
     display: flex;
     flex-direction: column;
     gap: 4px;
+}
+
+.map-link {
+    color: #3b82f6;
+    text-decoration: none;
+    margin-left: 4px;
+    transition: transform 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+}
+
+.map-link svg {
+    width: 16px;
+    height: 16px;
+}
+
+.map-link:hover {
+    transform: scale(1.2);
+    color: #2563eb;
 }
 
 .assign-controls {

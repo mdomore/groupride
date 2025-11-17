@@ -64,6 +64,14 @@
                         <label for="available-seats">Available Seats:</label>
                         <input type="number" id="available-seats" min="1" max="8" required>
                     </div>
+                    <div class="form-group">
+                        <label for="car-pickup-address">Pickup Address (optional)</label>
+                        <input type="text" id="car-pickup-address" placeholder="e.g., 123 Main St, City, State">
+                    </div>
+                    <div class="form-group">
+                        <label for="car-dropoff-address">Drop-off Address (optional)</label>
+                        <input type="text" id="car-dropoff-address" placeholder="e.g., 456 Oak Ave, City, State">
+                    </div>
                     <div class="form-group form-inline">
                         <label class="checkbox-label">
                             <input type="checkbox" id="car-requires-pin">
@@ -147,6 +155,17 @@
                 </div>
                 <div id="cars-list"></div>
                 <div id="ride-requests-section" class="ride-requests-block hidden">
+                    <div class="ride-requests-card">
+                        <div class="ride-requests-header">
+                            <h3>Ride Requests</h3>
+                            <p class="ride-requests-count" id="ride-requests-count"></p>
+                        </div>
+                        <div id="ride-requests-list" class="ride-requests-list">
+                            <div class="empty-state">
+                                <p>No ride requests yet.</p>
+                            </div>
+                        </div>
+                    </div>
                     <div class="ride-request-card">
                         <h3>Need a Ride?</h3>
                         <p class="ride-request-helper">Share your contact info, then list everyone who needs a ride. Add as many names as you need.</p>
@@ -158,6 +177,14 @@
                             <div class="form-group">
                                 <label for="ride-request-contact-phone">Contact Phone (optional)</label>
                                 <input type="tel" id="ride-request-contact-phone" placeholder="e.g., +1 555 123 4567">
+                            </div>
+                            <div class="form-group">
+                                <label for="ride-request-pickup-address">Pickup Address (optional)</label>
+                                <input type="text" id="ride-request-pickup-address" placeholder="e.g., 123 Main St, City, State">
+                            </div>
+                            <div class="form-group">
+                                <label for="ride-request-dropoff-address">Drop-off Address (optional)</label>
+                                <input type="text" id="ride-request-dropoff-address" placeholder="e.g., 456 Oak Ave, City, State">
                             </div>
                             <div class="form-group">
                                 <label for="ride-request-notes">Notes for drivers (optional)</label>
@@ -173,17 +200,6 @@
                                 <button type="button" id="clear-ride-request" class="secondary-btn">Clear</button>
                             </div>
                         </form>
-                    </div>
-                    <div class="ride-requests-card">
-                        <div class="ride-requests-header">
-                            <h3>Ride Requests</h3>
-                            <p class="ride-requests-count" id="ride-requests-count"></p>
-                        </div>
-                        <div id="ride-requests-list" class="ride-requests-list">
-                            <div class="empty-state">
-                                <p>No ride requests yet.</p>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </section>
@@ -218,11 +234,13 @@
                 <div class="modal-content">
                     <h3 id="pin-modal-title">Enter Car PIN</h3>
                     <p id="pin-modal-message">This car is protected. Enter the PIN shared by the driver.</p>
-                    <input type="password" id="car-pin-input" placeholder="PIN" minlength="4" maxlength="12">
-                    <div class="modal-actions">
-                        <button id="confirm-pin" class="btn-primary">Submit</button>
-                        <button id="cancel-pin" class="secondary-btn">Cancel</button>
-                    </div>
+                    <form id="pin-form" onsubmit="event.preventDefault(); window.app.submitPinModal();">
+                        <input type="password" id="car-pin-input" placeholder="PIN" minlength="4" maxlength="12" autocomplete="new-password" required>
+                        <div class="modal-actions">
+                            <button type="submit" id="confirm-pin" class="btn-primary">Submit</button>
+                            <button type="button" id="cancel-pin" class="secondary-btn">Cancel</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </main>

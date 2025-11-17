@@ -246,6 +246,8 @@ class GroupRideApp {
         const driverEmail = document.getElementById('driver-email').value.trim();
         const carModel = document.getElementById('car-model').value.trim();
         const availableSeats = parseInt(document.getElementById('available-seats').value);
+        const pickupAddress = document.getElementById('car-pickup-address').value.trim();
+        const dropoffAddress = document.getElementById('car-dropoff-address').value.trim();
         const requiresPin = document.getElementById('car-requires-pin').checked;
         const carPin = document.getElementById('car-pin').value.trim();
 
@@ -282,6 +284,8 @@ class GroupRideApp {
                 car_model: carModel,
                 available_seats: availableSeats,
                 occupied_seats: 0,
+                pickup_address: pickupAddress || null,
+                dropoff_address: dropoffAddress || null,
                 requires_pin: requiresPin,
                 car_pin: requiresPin ? carPin : null
             };
@@ -312,6 +316,8 @@ class GroupRideApp {
 
         const contactName = document.getElementById('ride-request-contact-name').value.trim();
         const contactPhone = document.getElementById('ride-request-contact-phone').value.trim();
+        const pickupAddress = document.getElementById('ride-request-pickup-address').value.trim();
+        const dropoffAddress = document.getElementById('ride-request-dropoff-address').value.trim();
         const notes = document.getElementById('ride-request-notes').value.trim();
         const passengerNames = this.getPassengerInputValues();
 
@@ -336,6 +342,8 @@ class GroupRideApp {
                 event_id: this.currentEventId,
                 contact_name: contactName,
                 contact_phone: contactPhone || null,
+                pickup_address: pickupAddress || null,
+                dropoff_address: dropoffAddress || null,
                 notes: notes || null
             });
 
@@ -381,21 +389,27 @@ class GroupRideApp {
     extractEventId(input) {
         if (!input) return null;
         
+        // Clean input - remove any colon and characters after it (e.g., "ASN9UH7K:1" -> "ASN9UH7K")
+        const cleaned = input.split(':')[0].trim().toUpperCase();
+        
         // If it's already just an event ID (8 characters, alphanumeric)
-        if (/^[A-Z0-9]{8}$/.test(input.toUpperCase())) {
-            return input.toUpperCase();
+        if (/^[A-Z0-9]{8}$/.test(cleaned)) {
+            return cleaned;
         }
         
         // If it's a URL, try to extract the event ID from query parameters
         try {
             const url = new URL(input);
             const eventParam = url.searchParams.get('event');
-            if (eventParam && /^[A-Z0-9]{8}$/.test(eventParam.toUpperCase())) {
-                return eventParam.toUpperCase();
+            if (eventParam) {
+                const cleanedParam = eventParam.split(':')[0].trim().toUpperCase();
+                if (/^[A-Z0-9]{8}$/.test(cleanedParam)) {
+                    return cleanedParam;
+                }
             }
         } catch (e) {
             // If URL parsing fails, try to extract from the path or just the input
-            const match = input.match(/[A-Z0-9]{8}/i);
+            const match = cleaned.match(/[A-Z0-9]{8}/);
             if (match) {
                 return match[0].toUpperCase();
             }
@@ -605,6 +619,22 @@ class GroupRideApp {
                             </button>
                             </div>
                         </div>
+                        ${(car.pickup_address || car.dropoff_address) ? `
+                            <div class="car-addresses">
+                                ${car.pickup_address ? `
+                                    <div class="car-address">
+                                        <strong>Pickup:</strong> ${this.escapeHtml(car.pickup_address)} 
+                                        <a href="${this.getMapLink(car.pickup_address)}" target="_blank" class="map-link" title="Open in map app">${this.getMapArrowIcon()}</a>
+                                    </div>
+                                ` : ''}
+                                ${car.dropoff_address ? `
+                                    <div class="car-address">
+                                        <strong>Drop-off:</strong> ${this.escapeHtml(car.dropoff_address)}
+                                        <a href="${this.getMapLink(car.dropoff_address)}" target="_blank" class="map-link" title="Open in map app">${this.getMapArrowIcon()}</a>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        ` : ''}
                         
                         <div class="car-layout">
                             <div class="seats-container">
@@ -722,10 +752,17 @@ class GroupRideApp {
     renderRideRequestItem(request) {
         const metaLines = [];
         if (request.contact_phone) {
-            metaLines.push(`Phone: ${request.contact_phone}`);
+            metaLines.push(`Phone: ${this.escapeHtml(request.contact_phone)}`);
+        }
+        if (request.pickup_address) {
+            const mapLink = this.getMapLink(request.pickup_address);
+            metaLines.push(`Pickup: ${this.escapeHtml(request.pickup_address)} <a href="${mapLink}" target="_blank" class="map-link" title="Open in map app">${this.getMapArrowIcon()}</a>`);
+        }
+        if (request.dropoff_address) {
+            metaLines.push(`Drop-off: ${this.escapeHtml(request.dropoff_address)}`);
         }
         if (request.notes) {
-            metaLines.push(`Notes: ${request.notes}`);
+            metaLines.push(`Notes: ${this.escapeHtml(request.notes)}`);
         }
 
         const metaHtml = metaLines.length > 0
@@ -1426,7 +1463,38 @@ class GroupRideApp {
         });
     }
 
-    // Format time for display
+    // Escape HTML to prevent XSS
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Generate map link for an address (detects device and uses appropriate map app)
+    getMapLink(address) {
+        if (!address) return '#';
+        // URL encode the address
+        const encodedAddress = encodeURIComponent(address);
+        
+        // Detect if user is on iOS (iPhone/iPad)
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        
+        if (isIOS) {
+            // Use Apple Maps on iOS
+            return `https://maps.apple.com/?q=${encodedAddress}`;
+        } else {
+            // Use Google Maps on other devices
+            return `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+        }
+    }
+
+    // Generate arrow icon SVG for map links
+    getMapArrowIcon() {
+        return `<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+            <path d="m21.41 10.59-7.99-8c-.78-.78-2.05-.78-2.83 0l-8.01 8c-.78.78-.78 2.05 0 2.83l8.01 8c.78.78 2.05.78 2.83 0l7.99-8c.79-.79.79-2.05 0-2.83M13.5 14.5V12H10v3H8v-4c0-.55.45-1 1-1h4.5V7.5L17 11z"/>
+        </svg>`;
+    }
+
     formatTime(timeString) {
         const [hours, minutes] = timeString.split(':');
         const date = new Date();
@@ -1532,16 +1600,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     
     // Check if there's an event ID in the URL
     const urlParams = new URLSearchParams(window.location.search);
-    const eventId = urlParams.get('event');
+    const eventParam = urlParams.get('event');
     
-    if (eventId) {
-        try {
-            await DatabaseService.getEvent(eventId);
-            window.app.currentEventId = eventId;
-            await window.app.displayEventView();
-        } catch (error) {
-            console.error('Error loading event from URL:', error);
-            // Event not found, continue with normal flow
+    if (eventParam) {
+        const eventId = window.app.extractEventId(eventParam);
+        if (eventId) {
+            try {
+                await DatabaseService.getEvent(eventId);
+                window.app.currentEventId = eventId;
+                await window.app.displayEventView();
+            } catch (error) {
+                console.error('Error loading event from URL:', error);
+                // Event not found, continue with normal flow
+            }
         }
     }
 });
