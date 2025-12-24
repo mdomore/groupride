@@ -625,8 +625,8 @@ class GroupRideApp {
     promptForEventPassword() {
         return new Promise((resolve) => {
             this.eventPasswordModalState = { resolve };
-            document.getElementById('event-password-modal-title').textContent = t('enterEventPassword');
-            document.getElementById('event-password-modal-message').textContent = t('eventPasswordRequired');
+            document.getElementById('event-password-modal-title').textContent = t('titleEnterEventPassword');
+            document.getElementById('event-password-modal-message').textContent = t('msgEventPasswordRequired');
             const input = document.getElementById('event-password-input');
             input.value = '';
             document.getElementById('event-password-modal').classList.remove('hidden');
@@ -643,7 +643,7 @@ class GroupRideApp {
         const input = document.getElementById('event-password-input');
         const password = input.value.trim();
         if (!password) {
-            this.showMessage(t('eventPasswordRequired'), 'error');
+            this.showMessage(t('eventPasswordRequiredError'), 'error');
             input.focus();
             return;
         }
@@ -778,7 +778,7 @@ class GroupRideApp {
 
             // Show confirmation modal
             this.pendingAction = { type: 'deleteEvent', eventId: this.currentEventId };
-            document.getElementById('confirm-title').textContent = t('deleteEvent');
+            document.getElementById('confirm-title').textContent = t('actionDeleteEvent');
             document.getElementById('confirm-message').textContent = t('deleteEventConfirm');
             document.getElementById('confirm-modal').classList.remove('hidden');
         } catch (error) {

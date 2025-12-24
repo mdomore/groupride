@@ -14,6 +14,9 @@ const translations = {
         eventDescription: "Event Description:",
         date: "Date:",
         time: "Time:",
+        labelEventPassword: "Event Password (optional):",
+        placeholderEventPassword: "Password to protect event editing",
+        eventPasswordHint: "If set, this password will be required to edit the event later.",
         createEvent: "Create Event",
         
         // Car Registration
@@ -41,7 +44,7 @@ const translations = {
         
         // Edit Event
         editEvent: "Edit Event",
-        deleteEvent: "Delete Event",
+        actionDeleteEvent: "Delete Event",
         saveChanges: "Save Changes",
         
         // Event View
@@ -60,6 +63,8 @@ const translations = {
         driver: "Driver",
         pinRequired: "PIN required",
         openSeats: "Open seats",
+        freeSeats: "free seat",
+        freeSeatsPlural: "free seats",
         remove: "Remove",
         pickup: "Pickup:",
         dropoff: "Drop-off:",
@@ -72,7 +77,7 @@ const translations = {
         needARide: "Need a Ride?",
         rideRequestHelper: "Share your contact info, then list everyone who needs a ride. Add as many names as you need.",
         contactName: "Contact Name",
-        contactAlsoNeedsRide: "I also need a ride (add me to passenger list)",
+        labelContactAlsoNeedsRide: "I also need a ride (add me to passenger list)",
         contactPhone: "Contact Phone (optional)",
         notesForDrivers: "Notes for drivers (optional)",
         passengerNames: "Passenger Names",
@@ -100,6 +105,9 @@ const translations = {
         yesContinue: "Yes, Continue",
         enterCarPin: "Enter Car PIN",
         pinProtectedMessage: "This car is protected. Enter the PIN shared by the driver.",
+        titleEnterEventPassword: "Enter Event Password",
+        msgEventPasswordRequired: "This event is protected. Enter the password to edit it.",
+        incorrectEventPassword: "Incorrect password. Please try again.",
         pin: "PIN",
         submit: "Submit",
         enterPinFor: "Enter PIN for",
@@ -109,6 +117,7 @@ const translations = {
         eventUpdatedSuccess: "Event updated successfully!",
         eventDeletedSuccess: "Event deleted successfully!",
         carRegisteredSuccess: "Car registered successfully!",
+        carUpdatedSuccess: "Car updated successfully!",
         rideRequestPosted: "Ride request posted!",
         seatBooked: "Seat booked for",
         seatFreed: "Seat freed for",
@@ -144,6 +153,7 @@ const translations = {
         carRequiresPin: "This car requires a PIN. Please try booking again.",
         enterPinBeforeAssign: "Enter the PIN before assigning riders to this car.",
         enterPinToBook: "Enter the PIN to book a seat in this car.",
+        eventPasswordRequiredError: "Please enter the password.",
         
         // Confirmations
         removeRideRequest: "Remove Ride Request",
@@ -156,6 +166,12 @@ const translations = {
         removeCarConfirm: "Are you sure you want to remove",
         removeCarWithPassengers: "This will also remove all",
         passenger: "passenger(s) from this car.",
+        editCar: "Edit Car",
+        edit: "Edit",
+        moreOptions: "More options",
+        updateCar: "Update Car",
+        enterPinToRemove: "Enter the PIN to remove this car.",
+        enterPinToEdit: "Enter the PIN to edit this car.",
         
         // Generic errors
         failedToCreateEvent: "Failed to create event. Please try again.",
@@ -171,6 +187,7 @@ const translations = {
         failedToBookSeat: "Failed to book seat. Please try again.",
         failedToFreeSeat: "Failed to free seat. Please try again.",
         failedToRemoveCar: "Failed to remove car. Please try again.",
+        failedToEditCar: "Failed to edit car. Please try again.",
         failedToCompleteAction: "Failed to complete action. Please try again.",
         couldNotVerifyPin: "Could not verify PIN. Please try again.",
         couldNotStartBooking: "Could not start booking. Please try again.",
@@ -196,7 +213,7 @@ const translations = {
     fr: {
         // Header
         appTitle: "GroupRide",
-        appSubtitle: "Partagez des trajets, économisez de l'argent, faites des amis, n'oubliez pas un enfant !",
+        appSubtitle: "Partagez des trajets, économisez de l'argent, faites vous des amis, n'oubliez pas un enfant !",
         
         // Event Creation
         createNewEvent: "Créer un nouvel événement",
@@ -204,6 +221,9 @@ const translations = {
         eventDescription: "Description de l'événement :",
         date: "Date :",
         time: "Heure :",
+        labelEventPassword: "Mot de passe de l'événement (optionnel) :",
+        placeholderEventPassword: "Mot de passe pour protéger l'édition de l'événement",
+        eventPasswordHint: "Si défini, ce mot de passe sera requis pour modifier l'événement plus tard.",
         createEvent: "Créer l'événement",
         
         // Car Registration
@@ -231,7 +251,7 @@ const translations = {
         
         // Edit Event
         editEvent: "Modifier l'événement",
-        deleteEvent: "Supprimer l'événement",
+        actionDeleteEvent: "Supprimer l'événement",
         saveChanges: "Enregistrer les modifications",
         
         // Event View
@@ -250,6 +270,8 @@ const translations = {
         driver: "Conducteur",
         pinRequired: "Code PIN requis",
         openSeats: "Places libres",
+        freeSeats: "place libre",
+        freeSeatsPlural: "places libres",
         remove: "Retirer",
         pickup: "Prise en charge :",
         dropoff: "Dépose :",
@@ -262,7 +284,7 @@ const translations = {
         needARide: "Besoin d'un trajet ?",
         rideRequestHelper: "Partagez vos informations de contact, puis listez tous ceux qui ont besoin d'un trajet. Ajoutez autant de noms que nécessaire.",
         contactName: "Nom du contact",
-        contactAlsoNeedsRide: "J'ai aussi besoin d'un trajet (m'ajouter à la liste des passagers)",
+        labelContactAlsoNeedsRide: "J'ai aussi besoin d'un trajet (m'ajouter à la liste des passagers)",
         contactPhone: "Téléphone du contact (optionnel)",
         notesForDrivers: "Notes pour les conducteurs (optionnel)",
         passengerNames: "Noms des passagers",
@@ -290,6 +312,9 @@ const translations = {
         yesContinue: "Oui, continuer",
         enterCarPin: "Entrer le code PIN de la voiture",
         pinProtectedMessage: "Cette voiture est protégée. Entrez le code PIN partagé par le conducteur.",
+        titleEnterEventPassword: "Entrer le mot de passe de l'événement",
+        msgEventPasswordRequired: "Cet événement est protégé. Entrez le mot de passe pour le modifier.",
+        incorrectEventPassword: "Mot de passe incorrect. Veuillez réessayer.",
         pin: "Code PIN",
         submit: "Soumettre",
         enterPinFor: "Entrer le code PIN pour",
@@ -299,6 +324,7 @@ const translations = {
         eventUpdatedSuccess: "Événement mis à jour avec succès !",
         eventDeletedSuccess: "Événement supprimé avec succès !",
         carRegisteredSuccess: "Voiture enregistrée avec succès !",
+        carUpdatedSuccess: "Voiture mise à jour avec succès !",
         rideRequestPosted: "Demande de trajet publiée !",
         seatBooked: "Place réservée pour",
         seatFreed: "Place libérée pour",
@@ -334,6 +360,7 @@ const translations = {
         carRequiresPin: "Cette voiture nécessite un code PIN. Veuillez réessayer de réserver.",
         enterPinBeforeAssign: "Entrez le code PIN avant d'assigner des passagers à cette voiture.",
         enterPinToBook: "Entrez le code PIN pour réserver une place dans cette voiture.",
+        eventPasswordRequiredError: "Veuillez entrer le mot de passe.",
         
         // Confirmations
         removeRideRequest: "Retirer la demande de trajet",
@@ -346,6 +373,12 @@ const translations = {
         removeCarConfirm: "Êtes-vous sûr de vouloir retirer",
         removeCarWithPassengers: "Cela retirera également tous les",
         passenger: "passager(s) de cette voiture.",
+        editCar: "Modifier la voiture",
+        edit: "Modifier",
+        moreOptions: "Plus d'options",
+        updateCar: "Mettre à jour la voiture",
+        enterPinToRemove: "Entrez le code PIN pour retirer cette voiture.",
+        enterPinToEdit: "Entrez le code PIN pour modifier cette voiture.",
         
         // Generic errors
         failedToCreateEvent: "Échec de la création de l'événement. Veuillez réessayer.",
@@ -361,6 +394,7 @@ const translations = {
         failedToBookSeat: "Échec de la réservation de la place. Veuillez réessayer.",
         failedToFreeSeat: "Échec de la libération de la place. Veuillez réessayer.",
         failedToRemoveCar: "Échec du retrait de la voiture. Veuillez réessayer.",
+        failedToEditCar: "Échec de la modification de la voiture. Veuillez réessayer.",
         failedToCompleteAction: "Échec de l'action. Veuillez réessayer.",
         couldNotVerifyPin: "Impossible de vérifier le code PIN. Veuillez réessayer.",
         couldNotStartBooking: "Impossible de démarrer la réservation. Veuillez réessayer.",

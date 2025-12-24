@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GroupRide - Carpooling Made Easy</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=6">
 </head>
 <body>
     <div class="container">
@@ -41,8 +41,8 @@
                         <input type="time" id="event-time" required>
                     </div>
                     <div class="form-group">
-                        <label for="event-password" data-i18n="eventPassword">Event Password (optional):</label>
-                        <input type="password" id="event-password" data-i18n-placeholder="eventPasswordPlaceholder" placeholder="Password to protect event editing" autocomplete="new-password">
+                        <label for="event-password" data-i18n="labelEventPassword">Event Password (optional):</label>
+                        <input type="password" id="event-password" data-i18n-placeholder="placeholderEventPassword" placeholder="Password to protect event editing" autocomplete="new-password">
                         <small class="form-hint" data-i18n="eventPasswordHint">If set, this password will be required to edit the event later.</small>
                     </div>
                     <button type="submit" data-i18n="createEvent">Create Event</button>
@@ -148,7 +148,7 @@
                 <div class="event-navigation">
                     <button id="back-to-create" class="secondary-btn" data-i18n="backToCreate">← Create New Event</button>
                     <button id="edit-event-btn" class="secondary-btn" data-i18n="editEvent">Edit Event</button>
-                    <button id="delete-event-btn" class="btn-danger" data-i18n="deleteEvent">Delete Event</button>
+                    <button id="delete-event-btn" class="btn-danger" data-i18n="actionDeleteEvent">Delete Event</button>
                 </div>
                 <div class="event-header">
                     <div class="event-title-section">
@@ -229,12 +229,12 @@
             <!-- Custom Modal for Event Password Entry -->
             <div id="event-password-modal" class="modal hidden">
                 <div class="modal-content">
-                    <h3 id="event-password-modal-title" data-i18n="enterEventPassword">Enter Event Password</h3>
-                    <p id="event-password-modal-message" data-i18n="eventPasswordRequired">This event is protected. Enter the password to edit it.</p>
+                    <h3 id="event-password-modal-title" data-i18n="titleEnterEventPassword">Enter Event Password</h3>
+                    <p id="event-password-modal-message" data-i18n="msgEventPasswordRequired">This event is protected. Enter the password to edit it.</p>
                     <form id="event-password-form" onsubmit="event.preventDefault(); window.app.submitEventPasswordModal();">
                         <!-- Hidden username field to satisfy accessibility warnings -->
                         <input type="text" name="username" autocomplete="username" style="display:none;" aria-hidden="true">
-                        <input type="password" id="event-password-input" data-i18n-placeholder="eventPassword" placeholder="Event Password" autocomplete="new-password" required>
+                        <input type="password" id="event-password-input" data-i18n-placeholder="placeholderEventPassword" placeholder="Event Password" autocomplete="new-password" required>
                         <div class="modal-actions">
                             <button type="submit" id="confirm-event-password" class="btn-primary" data-i18n="submit">Submit</button>
                             <button type="button" id="cancel-event-password" class="secondary-btn" data-i18n="cancel">Cancel</button>
@@ -256,7 +256,7 @@
                         <div class="form-group form-inline">
                             <label class="checkbox-label">
                                 <input type="checkbox" id="contact-also-needs-ride">
-                                <span data-i18n="contactAlsoNeedsRide">I also need a ride (add me to passenger list)</span>
+                                <span data-i18n="labelContactAlsoNeedsRide">I also need a ride (add me to passenger list)</span>
                             </label>
                         </div>
                         <div class="form-group">
@@ -290,7 +290,7 @@
         </main>
     </div>
 
-    <script src="i18n.js"></script>
-    <script type="module" src="script.js"></script>
+    <script src="i18n.js?v=6"></script>
+    <script type="module" src="script.js?v=6"></script>
 </body>
 </html>
