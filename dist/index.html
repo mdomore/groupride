@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GroupRide - Carpooling Made Easy</title>
+  <script type="module" crossorigin src="/groupride/assets/index-VaUcmcZm.js"></script>
+  <link rel="stylesheet" crossorigin href="/groupride/assets/index-DhHTjKWB.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-top">
+            <h1>GroupRide</h1>
+                <div class="language-switcher">
+                    <button id="lang-en" class="lang-btn active" data-lang="en">EN</button>
+                    <button id="lang-fr" class="lang-btn" data-lang="fr">FR</button>
+                </div>
+            </div>
+            <p data-i18n="appSubtitle">Share rides, save money, make friends, don't forget a child!</p>
+        </header>
+
+        <main>
+            <!-- Event Creation Section -->
+            <section id="create-event" class="card">
+                <h2 data-i18n="createNewEvent">Create New Event</h2>
+                <form id="event-form">
+                    <div class="form-group">
+                        <label for="event-name" data-i18n="eventName">Event Name:</label>
+                        <input type="text" id="event-name" required data-i18n-placeholder="placeholderEventName" placeholder="e.g., Company Meeting">
+                    </div>
+                    <div class="form-group">
+                        <label for="event-description" data-i18n="eventDescription">Event Description:</label>
+                        <textarea id="event-description" data-i18n-placeholder="placeholderEventDescription" placeholder="e.g., Soccer practice pickup."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="event-date" data-i18n="date">Date:</label>
+                        <input type="date" id="event-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="event-time" data-i18n="time">Time:</label>
+                        <input type="time" id="event-time" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="event-password" data-i18n="eventPassword">Event Password (optional):</label>
+                        <input type="password" id="event-password" data-i18n-placeholder="eventPasswordPlaceholder" placeholder="Password to protect event editing">
+                        <small class="form-hint" data-i18n="eventPasswordHint">If set, this password will be required to edit the event later.</small>
+                    </div>
+                    <button type="submit" data-i18n="createEvent">Create Event</button>
+                </form>
+            </section>
+
+
+            <!-- Car Registration Section -->
+            <section id="car-registration" class="card hidden">
+                <h2 data-i18n="registerYourCar">Register Your Car</h2>
+                <p class="section-description" data-i18n="addCarDescription">Add your car to this event. You can register multiple cars if needed.</p>
+                <form id="car-form">
+                    <div class="form-group">
+                        <label for="driver-name" data-i18n="driverName">Driver Name:</label>
+                        <input type="text" id="driver-name" required data-i18n-placeholder="placeholderYourName" placeholder="Your name">
+                    </div>
+                    <div class="form-group">
+                        <label for="driver-phone" data-i18n="driverPhone">Driver Phone:</label>
+                        <input type="tel" id="driver-phone" data-i18n-placeholder="placeholderPhone" placeholder="Your phone number">
+                    </div>
+                    <div class="form-group">
+                        <label for="driver-email" data-i18n="driverEmail">Driver Email:</label>
+                        <input type="email" id="driver-email" data-i18n-placeholder="placeholderEmail" placeholder="Your email address">
+                    </div>
+                    <div class="form-group">
+                        <label for="car-model" data-i18n="carModel">Car Model:</label>
+                        <input type="text" id="car-model" required data-i18n-placeholder="placeholderCarModel" placeholder="e.g., Toyota Camry">
+                    </div>
+                    <div class="form-group">
+                        <label for="available-seats" data-i18n="availableSeats">Available Seats:</label>
+                        <input type="number" id="available-seats" min="1" max="8" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="car-pickup-address" data-i18n="pickupAddress">Pickup Address (optional)</label>
+                        <input type="text" id="car-pickup-address" data-i18n-placeholder="placeholderAddress" placeholder="e.g., 123 Main St, City, State">
+                    </div>
+                    <div class="form-group">
+                        <label for="car-dropoff-address" data-i18n="dropoffAddress">Drop-off Address (optional)</label>
+                        <input type="text" id="car-dropoff-address" data-i18n-placeholder="placeholderAddress" placeholder="e.g., 456 Oak Ave, City, State">
+                    </div>
+                    <div class="form-group form-inline">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="car-requires-pin">
+                            <span data-i18n="requirePin">Require PIN to assign riders to this car</span>
+                        </label>
+                    </div>
+                    <div class="form-group hidden" id="car-pin-group">
+                        <label for="car-pin" data-i18n="setPin">Set a PIN (share with trusted drivers):</label>
+                        <input type="text" id="car-pin" minlength="4" maxlength="12" data-i18n-placeholder="placeholderPin" placeholder="Enter 4-12 characters">
+                        <small class="form-hint" data-i18n="pinHint">Leave unchecked to keep seats open for anyone.</small>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" data-i18n="registerCar">Register Car</button>
+                        <button type="button" id="cancel-add-car" class="secondary-btn" data-i18n="cancel">Cancel</button>
+                    </div>
+                </form>
+                <div class="form-note">
+                    <small data-i18n="carRegistrationNote">💡 You can register multiple cars for this event. Each car will be listed separately.</small>
+                </div>
+            </section>
+
+            <!-- Join Event Section -->
+            <section id="join-event" class="card">
+                <h2 data-i18n="joinExistingEvent">Join Existing Event</h2>
+                <form id="join-form">
+                    <div class="form-group">
+                        <label for="join-event-id" data-i18n="eventIdOrUrl">Event ID or URL:</label>
+                        <input type="text" id="join-event-id" required placeholder="Enter event ID or paste the full URL">
+                    </div>
+                    <button type="submit" data-i18n="joinEvent">Join Event</button>
+                </form>
+            </section>
+
+            <!-- Edit Event Section -->
+            <section id="edit-event" class="card hidden">
+                <h2 data-i18n="editEvent">Edit Event</h2>
+                <form id="edit-event-form">
+                    <div class="form-group">
+                        <label for="edit-event-name" data-i18n="eventName">Event Name:</label>
+                        <input type="text" id="edit-event-name" required data-i18n-placeholder="placeholderEventName" placeholder="e.g., Company Meeting">
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-event-description" data-i18n="eventDescription">Event Description:</label>
+                        <textarea id="edit-event-description" data-i18n-placeholder="placeholderEventDescription" placeholder="e.g., Soccer practice pickup."></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-event-date" data-i18n="date">Date:</label>
+                        <input type="date" id="edit-event-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="edit-event-time" data-i18n="time">Time:</label>
+                        <input type="time" id="edit-event-time" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" data-i18n="saveChanges">Save Changes</button>
+                        <button type="button" id="cancel-edit-event" class="secondary-btn" data-i18n="cancel">Cancel</button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Event View Section (hidden initially) -->
+            <section id="event-view" class="card hidden">
+                <div class="event-navigation">
+                    <button id="back-to-create" class="secondary-btn" data-i18n="backToCreate">← Create New Event</button>
+                    <button id="edit-event-btn" class="secondary-btn" data-i18n="editEvent">Edit Event</button>
+                </div>
+                <div class="event-header">
+                    <div class="event-title-section">
+                        <h2 id="current-event-name"></h2>
+                        <div class="event-datetime-display">
+                            <span id="current-event-description" class="event-description"></span>
+                            <span id="current-event-date" class="event-date"></span>
+                            <span id="current-event-time" class="event-time"></span>
+                        </div>
+                        <div class="event-id-display">
+                            <span class="event-id-label" data-i18n="eventId">Event ID:</span>
+                            <span id="current-event-id" class="event-id-value"></span>
+                            <button id="copy-current-event-id" class="copy-id-btn" title="Copy Event Link" data-i18n="copy">Copy</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="cars-list"></div>
+                <div id="ride-requests-section" class="ride-requests-block hidden">
+                    <div class="ride-requests-card">
+                        <div class="ride-requests-header">
+                            <h3 data-i18n="rideRequests">Ride Requests</h3>
+                            <p class="ride-requests-count" id="ride-requests-count"></p>
+                        </div>
+                        <div id="ride-requests-list" class="ride-requests-list">
+                            <div class="empty-state">
+                                <p data-i18n="noRideRequests">No ride requests yet.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ride-request-card">
+                        <h3 data-i18n="needARide">Need a Ride?</h3>
+                        <p class="ride-request-helper" data-i18n="rideRequestHelper">Share your contact info, then list everyone who needs a ride. Add as many names as you need.</p>
+                        <form id="ride-request-form">
+                            <div class="form-group">
+                                <label for="ride-request-contact-name" data-i18n="contactName">Contact Name</label>
+                                <input type="text" id="ride-request-contact-name" required data-i18n-placeholder="placeholderContactName" placeholder="e.g., Sam Carter">
+                            </div>
+                            <div class="form-group">
+                                <label for="ride-request-contact-phone" data-i18n="contactPhone">Contact Phone (optional)</label>
+                                <input type="tel" id="ride-request-contact-phone" data-i18n-placeholder="placeholderPhoneNumber" placeholder="e.g., +1 555 123 4567">
+                            </div>
+                            <div class="form-group">
+                                <label for="ride-request-pickup-address" data-i18n="pickupAddress">Pickup Address (optional)</label>
+                                <input type="text" id="ride-request-pickup-address" data-i18n-placeholder="placeholderAddress" placeholder="e.g., 123 Main St, City, State">
+                            </div>
+                            <div class="form-group">
+                                <label for="ride-request-dropoff-address" data-i18n="dropoffAddress">Drop-off Address (optional)</label>
+                                <input type="text" id="ride-request-dropoff-address" data-i18n-placeholder="placeholderAddress" placeholder="e.g., 456 Oak Ave, City, State">
+                            </div>
+                            <div class="form-group">
+                                <label for="ride-request-notes" data-i18n="notesForDrivers">Notes for drivers (optional)</label>
+                                <textarea id="ride-request-notes" rows="2" data-i18n-placeholder="placeholderNotes" placeholder="e.g., Child seat needed."></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label data-i18n="passengerNames">Passenger Names</label>
+                                <div id="ride-passenger-list" class="ride-passenger-list"></div>
+                                <button type="button" id="add-passenger-input" class="secondary-btn add-passenger-btn" data-i18n="addAnotherRider">+ Add another rider</button>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" data-i18n="requestRide">Request Ride</button>
+                                <button type="button" id="clear-ride-request" class="secondary-btn" data-i18n="clear">Clear</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Custom Modal for Passenger Name Input -->
+            <div id="passenger-modal" class="modal hidden">
+                <div class="modal-content">
+                    <h3 data-i18n="bookASeat">Book a Seat</h3>
+                    <p data-i18n="enterNameToBook">Enter your name to book this seat:</p>
+                    <input type="text" id="passenger-name-input" data-i18n-placeholder="placeholderYourName" placeholder="Your name" maxlength="20">
+                    <div class="modal-actions">
+                        <button id="confirm-booking" class="btn-primary" data-i18n="bookSeat">Book Seat</button>
+                        <button id="cancel-booking" class="secondary-btn" data-i18n="cancel">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Custom Modal for Confirmation -->
+            <div id="confirm-modal" class="modal hidden">
+                <div class="modal-content">
+                    <h3 id="confirm-title" data-i18n="confirmAction">Confirm Action</h3>
+                    <p id="confirm-message" data-i18n="areYouSure">Are you sure you want to proceed?</p>
+                    <div class="modal-actions">
+                        <button id="confirm-yes" class="btn-danger" data-i18n="yesContinue">Yes, Continue</button>
+                        <button id="confirm-no" class="secondary-btn" data-i18n="cancel">Cancel</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Custom Modal for Car PIN Entry -->
+            <div id="pin-modal" class="modal hidden">
+                <div class="modal-content">
+                    <h3 id="pin-modal-title" data-i18n="enterCarPin">Enter Car PIN</h3>
+                    <p id="pin-modal-message" data-i18n="pinProtectedMessage">This car is protected. Enter the PIN shared by the driver.</p>
+                    <form id="pin-form" onsubmit="event.preventDefault(); window.app.submitPinModal();">
+                        <input type="password" id="car-pin-input" data-i18n-placeholder="pin" placeholder="PIN" minlength="4" maxlength="12" autocomplete="new-password" required>
+                        <div class="modal-actions">
+                            <button type="submit" id="confirm-pin" class="btn-primary" data-i18n="submit">Submit</button>
+                            <button type="button" id="cancel-pin" class="secondary-btn" data-i18n="cancel">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Custom Modal for Event Password Entry -->
+            <div id="event-password-modal" class="modal hidden">
+                <div class="modal-content">
+                    <h3 id="event-password-modal-title" data-i18n="enterEventPassword">Enter Event Password</h3>
+                    <p id="event-password-modal-message" data-i18n="eventPasswordRequired">This event is protected. Enter the password to edit it.</p>
+                    <form id="event-password-form" onsubmit="event.preventDefault(); window.app.submitEventPasswordModal();">
+                        <input type="password" id="event-password-input" data-i18n-placeholder="eventPassword" placeholder="Event Password" autocomplete="new-password" required>
+                        <div class="modal-actions">
+                            <button type="submit" id="confirm-event-password" class="btn-primary" data-i18n="submit">Submit</button>
+                            <button type="button" id="cancel-event-password" class="secondary-btn" data-i18n="cancel">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="i18n.js"></script>
+</body>
+</html>

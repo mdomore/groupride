@@ -1,10 +1,67 @@
-// Supabase configuration
+// Database configuration
+// Uses local Supabase instance via Kong Gateway
+
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://bvalntwatgqabwityroe.supabase.co'
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2YWxudHdhdGdxYWJ3aXR5cm9lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA2MDU4ODksImV4cCI6MjA3NjE4MTg4OX0.umYova8KNPBC-hsKsdgH1puf0sttuvWnzTkUGAW5RM4'
+// Determine base URL - Supabase client expects origin only, we'll handle path in custom fetch
+function getSupabaseUrl() {
+    if (import.meta.env.VITE_SUPABASE_URL) {
+        return import.meta.env.VITE_SUPABASE_URL
+    }
+    return window.location.origin
+}
 
-export const supabase = createClient(supabaseUrl, supabaseKey)
+const supabaseUrl = getSupabaseUrl()
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY2NDAxMjQzLCJleHAiOjQ5MjAwMDEyNDN9.78P6V5-MMzcpeshykLDxnkK3FVWMc7obVqxX5JcXn40'
+
+// Custom fetch function to add /groupride prefix to API paths and ensure apikey header
+const customFetch = (url, options = {}) => {
+    const pathname = window.location.pathname
+    let modifiedUrl = url
+    
+    // If app is served from /groupride, add prefix to API paths
+    if (pathname.startsWith('/groupride')) {
+        const urlObj = new URL(url)
+        // Only modify /rest/v1/, /auth/v1/, /realtime/v1/ paths
+        if (urlObj.pathname.startsWith('/rest/v1/') || 
+            urlObj.pathname.startsWith('/auth/v1/') || 
+            urlObj.pathname.startsWith('/realtime/v1/')) {
+            urlObj.pathname = `/groupride${urlObj.pathname}`
+            modifiedUrl = urlObj.toString()
+        }
+    }
+    
+    // Ensure apikey header is always present
+    // Convert headers to plain object if needed, then ensure apikey is set
+    let headersObj = {}
+    if (options.headers) {
+        if (options.headers instanceof Headers) {
+            options.headers.forEach((value, key) => {
+                headersObj[key] = value
+            })
+        } else if (options.headers instanceof Object) {
+            headersObj = { ...options.headers }
+        }
+    }
+    
+    // Always set apikey header
+    headersObj['apikey'] = supabaseKey
+    
+    return fetch(modifiedUrl, {
+        ...options,
+        headers: headersObj
+    })
+}
+
+// Create client with custom fetch to handle path prefix and ensure apikey header
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+    global: {
+        fetch: customFetch,
+        headers: {
+            apikey: supabaseKey
+        }
+    }
+})
 
 // Database operations
 export class DatabaseService {
@@ -24,9 +81,10 @@ export class DatabaseService {
             .from('events')
             .select('*')
             .eq('id', eventId)
-            .single()
+            .maybeSingle()
         
         if (error) throw error
+        if (!data) throw new Error('Event not found')
         return data
     }
 
@@ -39,6 +97,15 @@ export class DatabaseService {
         
         if (error) throw error
         return data[0]
+    }
+
+    static async deleteEvent(eventId) {
+        const { error } = await supabase
+            .from('events')
+            .delete()
+            .eq('id', eventId)
+        
+        if (error) throw error
     }
 
     // Car operations
@@ -244,12 +311,37 @@ export class DatabaseService {
             .select('id')
             .eq('id', carId)
             .eq('car_pin', pin)
-            .single()
+            .maybeSingle()
 
         if (error || !data) {
             return false
         }
 
         return true
+    }
+
+    // Event password verification
+    static async verifyEventPassword(eventId, password) {
+        if (!password) return false
+
+        // Get the event to check if it has a password
+        const event = await this.getEvent(eventId)
+        if (!event || !event.password_hash) {
+            return false
+        }
+
+        // Hash the provided password and compare
+        const passwordHash = await this.hashPassword(password)
+        return passwordHash === event.password_hash
+    }
+
+    // Simple password hashing (using Web Crypto API)
+    static async hashPassword(password) {
+        const encoder = new TextEncoder()
+        const data = encoder.encode(password)
+        const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+        const hashArray = Array.from(new Uint8Array(hashBuffer))
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+        return hashHex
     }
 }

@@ -12,6 +12,10 @@ RUN npm ci
 # Copy source files
 COPY . .
 
+# Build arguments for Vite environment variables
+ARG VITE_SUPABASE_ANON_KEY
+ENV VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
+
 # Build the application
 RUN npm run build
 

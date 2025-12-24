@@ -1,0 +1,216 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # Supabase Services
+  # ============================================
+  
+  # Supabase Database
+  db:
+    container_name: supabase-db
+    image: supabase/postgres:15.1.0.147
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-h", "localhost"]
+      timeout: 5s
+      interval: 5s
+      retries: 10
+    command:
+      - postgres
+      - -c
+      - config_file=/etc/postgresql/postgresql.conf
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-your-super-secret-and-long-postgres-password}
+      POSTGRES_DB: postgres
+    volumes:
+      - ./supabase/volumes/db/realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql
+      - supabase_db_data:/var/lib/postgresql/data
+    networks:
+      - groupride-network
+
+  # Kong API Gateway (not exposed externally - accessed via nginx)
+  kong:
+    container_name: supabase-kong
+    image: kong:2.8.1
+    restart: unless-stopped
+    expose:
+      - "8000"
+      - "8443"
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /var/lib/kong/kong.yml
+      KONG_DNS_ORDER: LAST,A,CNAME
+      KONG_PLUGINS: request-transformer,cors,key-auth,acl
+    volumes:
+      - ./supabase/volumes/api/kong.yml:/var/lib/kong/kong.yml
+    networks:
+      - groupride-network
+    depends_on:
+      - db
+
+  # PostgREST (REST API)
+  rest:
+    container_name: supabase-rest
+    image: postgrest/postgrest:v11.2.0
+    restart: unless-stopped
+    environment:
+      PGRST_DB_URI: postgres://postgres:${POSTGRES_PASSWORD:-your-super-secret-and-long-postgres-password}@db:5432/postgres
+      PGRST_DB_SCHEMAS: public,storage,graphql_public
+      PGRST_DB_ANON_ROLE: postgres
+      PGRST_JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+      PGRST_DB_USE_LEGACY_GUC: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - groupride-network
+
+  # GoTrue (Auth)
+  auth:
+    container_name: supabase-auth
+    image: supabase/gotrue:v2.132.3
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9999/health"]
+      timeout: 5s
+      interval: 5s
+      retries: 3
+    environment:
+      GOTRUE_API_HOST: 0.0.0.0
+      GOTRUE_API_PORT: 9999
+      API_EXTERNAL_URL: ${SUPABASE_PUBLIC_URL:-http://localhost:8003}/auth/v1
+      GOTRUE_SITE_URL: ${SUPABASE_PUBLIC_URL:-http://localhost:8003}
+      GOTRUE_DB_DRIVER: postgres
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD:-your-super-secret-and-long-postgres-password}@db:5432/postgres
+      GOTRUE_JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+      GOTRUE_JWT_EXP: ${JWT_EXPIRY:-3600}
+      GOTRUE_ROLE_CLAIM_KEY: .role
+      GOTRUE_MAILER_AUTOCONFIRM: ${GOTRUE_MAILER_AUTOCONFIRM:-true}
+      GOTRUE_SMTP_HOST: ${GOTRUE_SMTP_HOST:-supabase-mail}
+      GOTRUE_SMTP_PORT: ${GOTRUE_SMTP_PORT:-2500}
+      GOTRUE_SMTP_USER: ${GOTRUE_SMTP_USER:-fake_mail_user}
+      GOTRUE_SMTP_PASS: ${GOTRUE_SMTP_PASS:-fake_mail_password}
+      GOTRUE_SMTP_ADMIN_EMAIL: ${GOTRUE_SMTP_ADMIN_EMAIL:-admin@example.com}
+      GOTRUE_SMS_AUTOCONFIRM: ${GOTRUE_SMS_AUTOCONFIRM:-true}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - groupride-network
+
+  # Realtime
+  realtime:
+    container_name: supabase-realtime
+    image: supabase/realtime:v2.25.22
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "bash", "-c", "printf \\\"GET /health HTTP/1.1\\n\\n\\\" > /dev/tcp/127.0.0.1/4000"]
+      timeout: 5s
+      interval: 5s
+      retries: 3
+    environment:
+      PORT: 4000
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: supabase_admin
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-your-super-secret-and-long-postgres-password}
+      DB_NAME: postgres
+      DB_AFTER_CONNECT_QUERY: 'SET search_path TO _realtime'
+      DB_ENC_KEY: supabaserealtime
+      API_JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+      FLY_ALLOC_ID: fly
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - groupride-network
+
+  # Postgres Meta
+  meta:
+    container_name: supabase-meta
+    image: supabase/postgres-meta:v0.68.0
+    restart: unless-stopped
+    environment:
+      PG_META_PORT: 8080
+      PG_META_DB_HOST: db
+      PG_META_DB_PORT: 5432
+      PG_META_DB_NAME: postgres
+      PG_META_DB_USER: supabase_admin
+      PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD:-your-super-secret-and-long-postgres-password}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - groupride-network
+
+  # Supabase Studio (optional - for database management)
+  studio:
+    container_name: supabase-studio
+    image: supabase/studio:latest
+    restart: unless-stopped
+    ports:
+      - "${STUDIO_PORT:-3001}:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/profile', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"]
+      timeout: 5s
+      interval: 5s
+      retries: 3
+    environment:
+      STUDIO_PG_META_URL: http://meta:8080
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-your-super-secret-and-long-postgres-password}
+      SUPABASE_URL: http://kong:8000
+      SUPABASE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL:-http://localhost:8001}
+      SUPABASE_ANON_KEY: ${ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY2NDAxMjQzLCJleHAiOjQ5MjAwMDEyNDN9.78P6V5-MMzcpeshykLDxnkK3FVWMc7obVqxX5JcXn40}
+      SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UiLCJpYXQiOjE3NjY0MDEyNDMsImV4cCI6NDkyMDAwMTI0M30.6-hsvUb01GLHUoI2ivJ8-_S1hyc3B0Uu1zLQEqI066k}
+    depends_on:
+      - meta
+      - kong
+    networks:
+      - groupride-network
+
+  # ============================================
+  # Application Services
+  # ============================================
+
+  # Frontend (Public Carpool App)
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_SUPABASE_ANON_KEY: ${ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY2NDAxMjQzLCJleHAiOjQ5MjAwMDEyNDN9.78P6V5-MMzcpeshykLDxnkK3FVWMc7obVqxX5JcXn40}
+    ports:
+      - "127.0.0.1:8001:80"
+    restart: unless-stopped
+    networks:
+      - groupride-network
+    depends_on:
+      - kong
+      - db
+
+  # FastAPI Backend (Club Management) - Disabled until backend Dockerfile is created
+  # backend:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "127.0.0.1:8002:8000"
+  #   restart: unless-stopped
+  #   environment:
+  #     - SUPABASE_URL=http://kong:8000
+  #     - SUPABASE_PUBLIC_URL=${SUPABASE_PUBLIC_URL:-http://localhost:8003}
+  #     - SUPABASE_SERVICE_KEY=${SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UiLCJpYXQiOjE3NjY0MDEyNDMsImV4cCI6NDkyMDAwMTI0M30.6-hsvUb01GLHUoI2ivJ8-_S1hyc3B0Uu1zLQEqI066k}
+  #     - SUPABASE_ANON_KEY=${ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY2NDAxMjQzLCJleHAiOjQ5MjAwMDEyNDN9.78P6V5-MMzcpeshykLDxnkK3FVWMc7obVqxX5JcXn40}
+  #     - CORS_ORIGINS=http://localhost:5173,http://localhost:80,http://localhost:8001
+  #   networks:
+  #     - groupride-network
+  #   depends_on:
+  #     - kong
+  #     - db
+
+volumes:
+  supabase_db_data:
+
+networks:
+  groupride-network:
+    driver: bridge
