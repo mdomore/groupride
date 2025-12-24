@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # ============================================
   # Supabase Services
@@ -20,7 +18,7 @@ services:
       - -c
       - config_file=/etc/postgresql/postgresql.conf
     environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-your-super-secret-and-long-postgres-password}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: postgres
     volumes:
       - ./supabase/volumes/db/realtime.sql:/docker-entrypoint-initdb.d/migrations/99-realtime.sql
@@ -54,10 +52,10 @@ services:
     image: postgrest/postgrest:v11.2.0
     restart: unless-stopped
     environment:
-      PGRST_DB_URI: postgres://postgres:${POSTGRES_PASSWORD:-your-super-secret-and-long-postgres-password}@db:5432/postgres
+      PGRST_DB_URI: postgres://postgres:${POSTGRES_PASSWORD}@db:5432/postgres
       PGRST_DB_SCHEMAS: public,storage,graphql_public
       PGRST_DB_ANON_ROLE: postgres
-      PGRST_JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+      PGRST_JWT_SECRET: ${JWT_SECRET}
       PGRST_DB_USE_LEGACY_GUC: "false"
     depends_on:
       db:
@@ -78,18 +76,18 @@ services:
     environment:
       GOTRUE_API_HOST: 0.0.0.0
       GOTRUE_API_PORT: 9999
-      API_EXTERNAL_URL: ${SUPABASE_PUBLIC_URL:-http://localhost:8003}/auth/v1
-      GOTRUE_SITE_URL: ${SUPABASE_PUBLIC_URL:-http://localhost:8003}
+      API_EXTERNAL_URL: ${SUPABASE_PUBLIC_URL}/auth/v1
+      GOTRUE_SITE_URL: ${SUPABASE_PUBLIC_URL}
       GOTRUE_DB_DRIVER: postgres
-      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD:-your-super-secret-and-long-postgres-password}@db:5432/postgres
-      GOTRUE_JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+      GOTRUE_DB_DATABASE_URL: postgres://supabase_auth_admin:${POSTGRES_PASSWORD}@db:5432/postgres
+      GOTRUE_JWT_SECRET: ${JWT_SECRET}
       GOTRUE_JWT_EXP: ${JWT_EXPIRY:-3600}
       GOTRUE_ROLE_CLAIM_KEY: .role
       GOTRUE_MAILER_AUTOCONFIRM: ${GOTRUE_MAILER_AUTOCONFIRM:-true}
       GOTRUE_SMTP_HOST: ${GOTRUE_SMTP_HOST:-supabase-mail}
       GOTRUE_SMTP_PORT: ${GOTRUE_SMTP_PORT:-2500}
       GOTRUE_SMTP_USER: ${GOTRUE_SMTP_USER:-fake_mail_user}
-      GOTRUE_SMTP_PASS: ${GOTRUE_SMTP_PASS:-fake_mail_password}
+      GOTRUE_SMTP_PASS: ${GOTRUE_SMTP_PASS}
       GOTRUE_SMTP_ADMIN_EMAIL: ${GOTRUE_SMTP_ADMIN_EMAIL:-admin@example.com}
       GOTRUE_SMS_AUTOCONFIRM: ${GOTRUE_SMS_AUTOCONFIRM:-true}
     depends_on:
@@ -113,11 +111,11 @@ services:
       DB_HOST: db
       DB_PORT: 5432
       DB_USER: supabase_admin
-      DB_PASSWORD: ${POSTGRES_PASSWORD:-your-super-secret-and-long-postgres-password}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
       DB_NAME: postgres
       DB_AFTER_CONNECT_QUERY: 'SET search_path TO _realtime'
       DB_ENC_KEY: supabaserealtime
-      API_JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+      API_JWT_SECRET: ${JWT_SECRET}
       FLY_ALLOC_ID: fly
     depends_on:
       db:
@@ -136,7 +134,7 @@ services:
       PG_META_DB_PORT: 5432
       PG_META_DB_NAME: postgres
       PG_META_DB_USER: supabase_admin
-      PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD:-your-super-secret-and-long-postgres-password}
+      PG_META_DB_PASSWORD: ${POSTGRES_PASSWORD}
     depends_on:
       db:
         condition: service_healthy
@@ -149,7 +147,7 @@ services:
     image: supabase/studio:latest
     restart: unless-stopped
     ports:
-      - "${STUDIO_PORT:-3001}:3000"
+      - "${STUDIO_PORT}:3000"
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/profile', (r) => {if (r.statusCode !== 200) throw new Error(r.statusCode)})"]
       timeout: 5s
@@ -157,11 +155,11 @@ services:
       retries: 3
     environment:
       STUDIO_PG_META_URL: http://meta:8080
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-your-super-secret-and-long-postgres-password}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       SUPABASE_URL: http://kong:8000
-      SUPABASE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL:-http://localhost:8001}
-      SUPABASE_ANON_KEY: ${ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY2NDAxMjQzLCJleHAiOjQ5MjAwMDEyNDN9.78P6V5-MMzcpeshykLDxnkK3FVWMc7obVqxX5JcXn40}
-      SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UiLCJpYXQiOjE3NjY0MDEyNDMsImV4cCI6NDkyMDAwMTI0M30.6-hsvUb01GLHUoI2ivJ8-_S1hyc3B0Uu1zLQEqI066k}
+      SUPABASE_PUBLIC_URL: ${SUPABASE_PUBLIC_URL}
+      SUPABASE_ANON_KEY: ${ANON_KEY}
+      SUPABASE_SERVICE_KEY: ${SERVICE_ROLE_KEY}
     depends_on:
       - meta
       - kong
@@ -178,7 +176,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        VITE_SUPABASE_ANON_KEY: ${ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY2NDAxMjQzLCJleHAiOjQ5MjAwMDEyNDN9.78P6V5-MMzcpeshykLDxnkK3FVWMc7obVqxX5JcXn40}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
     ports:
       - "127.0.0.1:8001:80"
     restart: unless-stopped
@@ -198,9 +196,9 @@ services:
   #   restart: unless-stopped
   #   environment:
   #     - SUPABASE_URL=http://kong:8000
-  #     - SUPABASE_PUBLIC_URL=${SUPABASE_PUBLIC_URL:-http://localhost:8003}
-  #     - SUPABASE_SERVICE_KEY=${SERVICE_ROLE_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UiLCJpYXQiOjE3NjY0MDEyNDMsImV4cCI6NDkyMDAwMTI0M30.6-hsvUb01GLHUoI2ivJ8-_S1hyc3B0Uu1zLQEqI066k}
-  #     - SUPABASE_ANON_KEY=${ANON_KEY:-eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY2NDAxMjQzLCJleHAiOjQ5MjAwMDEyNDN9.78P6V5-MMzcpeshykLDxnkK3FVWMc7obVqxX5JcXn40}
+  #     - SUPABASE_PUBLIC_URL=${SUPABASE_PUBLIC_URL}
+  #     - SUPABASE_SERVICE_KEY=${SERVICE_ROLE_KEY}
+  #     - SUPABASE_ANON_KEY=${ANON_KEY}
   #     - CORS_ORIGINS=http://localhost:5173,http://localhost:80,http://localhost:8001
   #   networks:
   #     - groupride-network

@@ -2023,7 +2023,9 @@ class GroupRideApp {
                 }
             } else if (type === 'removeRideRequest') {
                 await DatabaseService.deleteRideRequest(requestId);
+                // Refresh both ride requests and cars (in case seats were freed)
                 await this.displayRideRequests();
+                await this.displayCars();
                 this.showMessage(`${t('removeRequest')} ${riderName}`, 'success');
             } else if (type === 'removeRidePassenger') {
                 await DatabaseService.deleteRidePassenger(passengerId);

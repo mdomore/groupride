@@ -5,10 +5,14 @@
 CREATE TABLE IF NOT EXISTS events (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
+    description TEXT,
     date DATE NOT NULL,
     time TIME NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Ensure description column exists (handles older schemas)
+ALTER TABLE events ADD COLUMN IF NOT EXISTS description TEXT;
 
 -- Create cars table (safe)
 CREATE TABLE IF NOT EXISTS cars (

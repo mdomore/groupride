@@ -1,5 +1,10 @@
 -- Supabase Required Roles and Permissions
 -- This script sets up the roles needed for Supabase services to work
+--
+-- SECURITY WARNING: The passwords in this file are placeholders.
+-- In production, these passwords should match your POSTGRES_PASSWORD from .env
+-- or be set separately using ALTER USER commands after role creation.
+-- Consider using a script to substitute the password from environment variables.
 
 -- Create roles if they don't exist
 DO $$

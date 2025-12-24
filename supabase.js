@@ -12,7 +12,11 @@ function getSupabaseUrl() {
 }
 
 const supabaseUrl = getSupabaseUrl()
-const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlIiwiaWF0IjoxNzY2NDAxMjQzLCJleHAiOjQ5MjAwMDEyNDN9.78P6V5-MMzcpeshykLDxnkK3FVWMc7obVqxX5JcXn40'
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+
+if (!supabaseKey) {
+  throw new Error('VITE_SUPABASE_ANON_KEY environment variable is required')
+}
 
 // Custom fetch function to add /groupride prefix to API paths and ensure apikey header
 const customFetch = (url, options = {}) => {
@@ -253,6 +257,69 @@ export class DatabaseService {
     }
 
     static async deleteRideRequest(requestId) {
+        // First, find all passengers assigned to cars from this ride request
+        // and free up their seats before deleting the ride request
+        
+        // Get all ride request passengers for this request
+        const { data: ridePassengers, error: ridePassengersError } = await supabase
+            .from('ride_request_passengers')
+            .select('id')
+            .eq('request_id', requestId)
+
+        if (ridePassengersError) throw ridePassengersError
+
+        if (ridePassengers && ridePassengers.length > 0) {
+            const ridePassengerIds = ridePassengers.map(rp => rp.id)
+
+            // Find all passengers in cars that are linked to these ride request passengers
+            const { data: passengers, error: passengersError } = await supabase
+                .from('passengers')
+                .select('id, car_id, request_passenger_id')
+                .in('request_passenger_id', ridePassengerIds)
+
+            if (passengersError) throw passengersError
+
+            // Group passengers by car_id to update occupied_seats efficiently
+            const carPassengerCounts = {}
+            for (const passenger of passengers || []) {
+                if (passenger.car_id) {
+                    carPassengerCounts[passenger.car_id] = (carPassengerCounts[passenger.car_id] || 0) + 1
+                }
+            }
+
+            // Remove all passengers linked to this ride request
+            if (passengers && passengers.length > 0) {
+                const passengerIds = passengers.map(p => p.id)
+                const { error: deletePassengersError } = await supabase
+                    .from('passengers')
+                    .delete()
+                    .in('id', passengerIds)
+
+                if (deletePassengersError) throw deletePassengersError
+            }
+
+            // Update occupied_seats for each affected car
+            for (const [carId, count] of Object.entries(carPassengerCounts)) {
+                // Get current car state
+                const { data: car, error: carError } = await supabase
+                    .from('cars')
+                    .select('occupied_seats')
+                    .eq('id', carId)
+                    .single()
+
+                if (carError) throw carError
+
+                // Update occupied_seats
+                const { error: updateError } = await supabase
+                    .from('cars')
+                    .update({ occupied_seats: Math.max(0, (car.occupied_seats || 0) - count) })
+                    .eq('id', carId)
+
+                if (updateError) throw updateError
+            }
+        }
+
+        // Now delete the ride request (this will cascade delete ride_request_passengers)
         const { error } = await supabase
             .from('ride_requests')
             .delete()
